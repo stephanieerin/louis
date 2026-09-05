@@ -1,6 +1,6 @@
 # Louis Home Assistant add-on — wraps the multi-arch GHCR image.
 # Pin matches config.yaml version (bump both on release).
-FROM ghcr.io/stuartromanek/louis:v1.2.3
+FROM ghcr.io/stuartromanek/louis:v1.2.4
 
 # Map Supervisor options → LOUIS_* and start Nitro (image CMD is overridden).
 COPY run.sh /run.sh

@@ -21,6 +21,19 @@ permissions:
   packages: write
 
 jobs:
+  ensure-github-release:
+    name: Ensure GitHub Release
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release from CHANGELOG if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: node desktop/scripts/ensure-github-release.mjs
+
   publish-docker:
     name: Docker
     runs-on: ubuntu-latest
@@ -171,7 +184,7 @@ jobs:
   upload-desktop-assets:
     name: Attach installers to GitHub Release
     if: github.event_name == 'push'
-    needs: [desktop-mac, desktop-win]
+    needs: [ensure-github-release, desktop-mac, desktop-win]
     runs-on: ubuntu-latest
     steps:
       - name: Download macOS artifacts
@@ -185,22 +198,6 @@ jobs:
         with:
           name: desktop-win
           path: dist
-
-      - name: Wait for GitHub Release (release-it creates it after tag push)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          tag="${{ github.ref_name }}"
-          for i in $(seq 1 36); do
-            if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-              echo "Release $tag is ready"
-              exit 0
-            fi
-            echo "Waiting for release $tag ($i/36)…"
-            sleep 10
-          done
-          echo "Release not found after wait; softprops will create one if needed"
 
       - name: Upload assets to Release
         uses: softprops/action-gh-release@v2

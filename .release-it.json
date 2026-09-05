@@ -16,7 +16,7 @@
   "github": {
     "release": true,
     "releaseName": "v${version}",
-    "autoGenerate": true
+    "autoGenerate": false
   },
   "plugins": {
     "@release-it/keep-a-changelog": {

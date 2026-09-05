@@ -8,7 +8,7 @@ Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/wo
 
 1. Publishes a **multi-arch** Docker image to **Docker Hub** (`stuartromanek/louis`) and **GHCR** (`ghcr.io/stuartromanek/louis`) — `:latest` and `:{tag}` for `linux/amd64` + `linux/arm64`
 2. Builds macOS DMGs (arm64 + x64) and Windows NSIS Setup
-3. Uploads those installers as **Assets** on the same GitHub Release created by `release-it`
+3. Uploads those installers as **Assets** on the GitHub Release (`npm run release` creates it when `gh` is logged in; CI creates it from CHANGELOG.md if it is missing)
 
 ### Desktop artifacts
 
@@ -40,7 +40,7 @@ Prerequisites:
 
 - Clean working tree on `main`, up to date with `origin/main`
 - `[Unreleased]` in `CHANGELOG.md` has the notes for this release (can be empty only if you intend a no-notes bump)
-- `gh` authenticated if you want the GitHub Release created automatically (`gh auth status`)
+- `gh` logged in (`gh auth status`) so `npm run release` can set `GH_TOKEN` from `gh auth token`. release-it does **not** read gh’s keyring by itself. You can also export `GH_TOKEN` / `GITHUB_TOKEN`. If the local token is missing, CI still creates the GitHub Release from CHANGELOG.md.
 - **Desktop pins:** consider bumping `YTDLP_TAG` / ffmpeg pins + SHA-256 in [`desktop/scripts/fetch-binaries.mjs`](../desktop/scripts/fetch-binaries.mjs) before cutting. Not required every release if current pins still work.
 
 ```bash
@@ -60,8 +60,8 @@ What `npm run release` does:
 3. Commits with `chore(release): vX.Y.Z`
 4. Creates git tag `vX.Y.Z`
 5. Pushes commit + tag to `origin`
-6. Creates a GitHub Release for that tag
-7. Tag push triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml): Docker Hub + GHCR **and** desktop installer Assets
+6. Creates a GitHub Release for that tag (Keep a Changelog notes, not GitHub auto notes)
+7. Tag push triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml): Docker Hub + GHCR **and** desktop installer Assets. CI creates the Release from CHANGELOG.md if step 6 was skipped.
 
 Dry run (no commit / tag / push):
 
@@ -149,5 +149,5 @@ See [`.release-it.json`](../.release-it.json). Notable choices:
 
 - `npm.publish: false` — this app is not published to the npm registry
 - `git.requireBranch: main` — releases only from `main`
-- `github.release: true` — creates a GitHub Release; needs `GH_TOKEN` / `gh` auth locally
+- `github.release: true` — creates a GitHub Release from CHANGELOG notes (`autoGenerate: false`). `npm run release` sets `GH_TOKEN` from `gh auth token` when unset
 - Keep a Changelog plugin: `addUnreleased: true`, `addVersionUrl: true`

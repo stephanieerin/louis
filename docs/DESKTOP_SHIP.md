@@ -27,7 +27,7 @@ Research background: [DESKTOP.md](DESKTOP.md). Cut releases: [RELEASE.md](RELEAS
 main → npm run release
   → bump package.json + CHANGELOG
   → tag vX.Y.Z + push
-  → release-it creates GitHub Release
+  → GitHub Release (local `gh auth token`, or CI from CHANGELOG)
   → tag push runs .github/workflows/release.yml
   → GHCR: :latest + :vX.Y.Z
 ```

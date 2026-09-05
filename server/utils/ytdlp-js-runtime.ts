@@ -2,6 +2,10 @@ import { execFile } from 'node:child_process'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import type { H3Event } from 'h3'
+import {
+  electronAsNodeProbe,
+  jsRuntimeExecOptions,
+} from '../../shared/ytdlp-js-runtime-probe.mjs'
 import { parseYtdlpJsRuntimeSpec } from '../../shared/ytdlp-js-runtime-spec.mjs'
 import { pickLouisEnv } from './louis-env'
 
@@ -11,8 +15,8 @@ const execFileAsync = promisify(execFile)
 
 /**
  * yt-dlp `--js-runtimes` value for YouTube EJS challenges.
- * Desktop sets LOUIS_YTDLP_JS_RUNTIME to `node:<absolute Electron node shim>`.
- * Docker / native: bare `node` on PATH.
+ * Desktop sets LOUIS_YTDLP_JS_RUNTIME to `node:<absolute Electron node shim>`
+ * (Windows: `node:<Louis.exe>`). Docker / native: bare `node` on PATH.
  */
 export function resolveYtdlpJsRuntimeSpec(event?: H3Event): string {
   const config = event ? useRuntimeConfig(event) : useRuntimeConfig()
@@ -56,17 +60,19 @@ function expandBareBinary(name: string): string[] {
 }
 
 async function probeNodeVersion(binaryPath: string): Promise<string | null> {
+  const execOptions = jsRuntimeExecOptions(binaryPath)
   try {
-    const { stdout } = await execFileAsync(binaryPath, ['-e', 'console.log(process.version)'], {
-      timeout: 15_000,
-      env: process.env,
-    })
+    const { stdout } = await execFileAsync(
+      binaryPath,
+      ['-e', 'console.log(process.version)'],
+      execOptions,
+    )
     const version = stdout.trim().split('\n')[0] || ''
     return version || null
   }
   catch {
     try {
-      const { stdout } = await execFileAsync(binaryPath, ['--version'], { timeout: 15_000 })
+      const { stdout } = await execFileAsync(binaryPath, ['--version'], execOptions)
       const version = stdout.trim().split('\n')[0] || ''
       return version || null
     }
@@ -87,6 +93,20 @@ export async function resolveYtdlpJsRuntimeStatus(event?: H3Event): Promise<Ytdl
       spec,
       runtime,
       error: `Unsupported JS runtime "${runtime}"`,
+    }
+  }
+
+  const asNode = electronAsNodeProbe(runtime, binaryPath)
+  if (asNode) {
+    if (!asNode.available) {
+      return { available: false, spec, runtime, error: asNode.error }
+    }
+    return {
+      available: true,
+      spec,
+      runtime,
+      path: asNode.path,
+      version: asNode.version,
     }
   }
 

@@ -15,6 +15,8 @@ import {
 } from './configStore.mjs'
 import { BUNDLED_YOTO_CLIENT_ID } from '../shared/bundledYotoClientId.mjs'
 import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
+import { ytdlpJsRuntimeSpecForDesktop } from './js-runtime.mjs'
+import { formatDegradedHealthError, formatHealthTimeoutMessage } from './nitro-health.mjs'
 
 const require = createRequire(import.meta.url)
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
@@ -157,15 +159,16 @@ async function waitForHealth(timeoutMs = 60_000) {
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(HEALTH_URL)
-      if (res.ok) return await res.json()
-      lastError = `HTTP ${res.status}`
+      const body = await res.json().catch(() => null)
+      if (res.ok) return body
+      lastError = formatDegradedHealthError(res.status, body)
     }
     catch (err) {
       lastError = err instanceof Error ? err.message : String(err)
     }
     await new Promise(r => setTimeout(r, 250))
   }
-  throw new Error(`Nitro health check timed out (${HEALTH_URL}): ${lastError}`)
+  throw new Error(formatHealthTimeoutMessage(HEALTH_URL, lastError))
 }
 
 function buildNitroEnv() {
@@ -193,14 +196,20 @@ function buildNitroEnv() {
   setLouisAndNuxtEnv(env, 'LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR', audioDir)
   const managedBinDir = path.join(audioDir, 'bin')
 
-  // Electron-as-node shim for yt-dlp EJS (Finder/Start Menu PATH has no system node).
+  // Electron-as-node shim on PATH (Finder/Start Menu has no system node).
+  // Windows spec is Louis.exe — yt-dlp cannot CreateProcess a .cmd without a shell.
   const nodeShimPath = ensureElectronNodeShim(managedBinDir, process.execPath)
   env.PATH = [managedBinDir, env.PATH].filter(Boolean).join(path.delimiter)
+  const jsRuntimeSpec = ytdlpJsRuntimeSpecForDesktop(
+    process.platform,
+    process.execPath,
+    nodeShimPath,
+  )
   setLouisAndNuxtEnv(
     env,
     'LOUIS_YTDLP_JS_RUNTIME',
     'NUXT_YTDLP_JS_RUNTIME',
-    `node:${nodeShimPath}`,
+    jsRuntimeSpec,
   )
 
   setLouisAndNuxtEnv(
@@ -221,7 +230,7 @@ function buildNitroEnv() {
     binDir: tools.binDir,
     ytdlp: tools.ytdlpPath,
     ffmpeg: tools.ffmpegPath,
-    jsRuntime: `node:${nodeShimPath}`,
+    jsRuntime: jsRuntimeSpec,
   })
   console.log('[louis-desktop] config', {
     path: configStore.configPath,

@@ -9,6 +9,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Fixed
+- Windows desktop no longer fails to start with Nitro health 503 because the JS-runtime probe could not run `node.cmd` ([#26](https://github.com/stuartromanek/louis/issues/26)). Health uses the Electron-as-node process (and `Louis.exe` for yt-dlp); a degraded `/api/health` now shows the failed check in the startup dialog.
+
 ## [1.2.3] - 2026-09-05
 
 ### Changed

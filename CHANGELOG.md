@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-09-05
+
 ### Changed
 - YouTube bot checks retry anonymous player clients (android / ios / tv) before failing; search/import tries android once. Cookie escalate stays immediate when a cookies.txt is configured. Client switches after a bot check skip the 403/429 backoff.
 - Desktop bundled yt-dlp pin `2026.07.04` → `2026.08.19`.
@@ -160,7 +162,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.2...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.3...main
+[1.2.3]: https://github.com/stuartromanek/louis/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/stuartromanek/louis/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/stuartromanek/louis/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/stuartromanek/louis/compare/v1.1.2...v1.2.0

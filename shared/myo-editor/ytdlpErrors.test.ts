@@ -8,6 +8,7 @@ import {
   playerClientForAttempt,
   shouldEscalateToCookies,
   shouldRetryYtdlp,
+  YTDLP_BOT_CLIENT_SWITCH_MS,
   YTDLP_COOKIE_FOLLOWUP_ATTEMPTS,
   YTDLP_MAX_ATTEMPTS,
 } from './ytdlpErrors.ts'
@@ -41,6 +42,23 @@ describe('classifyYtdlpStderr', () => {
       classifyYtdlpStderr('ERROR: Sign in to confirm you’re not a bot'),
       'bot_signin',
     )
+    assert.equal(
+      classifyYtdlpStderr('ERROR: Sign in to confirm you\'re not a bot'),
+      'bot_signin',
+    )
+    assert.equal(
+      classifyYtdlpStderr('ERROR: Sign in to confirm youre not a bot'),
+      'bot_signin',
+    )
+  })
+
+  it('classifies yt-dlp cookies FAQ dump as bot_signin', () => {
+    const faq = [
+      'ERROR: [youtube] QAnco5_C1d0: Sign in to confirm youre not a bot.',
+      'Use --cookies-from-browser or --cookies for the authentication.',
+      'See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp',
+    ].join(' ')
+    assert.equal(classifyYtdlpStderr(faq), 'bot_signin')
   })
 
   it('classifies private videos', () => {
@@ -132,8 +150,10 @@ describe('shouldRetryYtdlp', () => {
     assert.equal(shouldRetryYtdlp('outdated', 1), false)
   })
 
-  it('does not retry bot_signin without cookies', () => {
-    assert.equal(shouldRetryYtdlp('bot_signin', 0), false)
+  it('retries bot_signin without cookies; does not retry age_restricted', () => {
+    assert.equal(shouldRetryYtdlp('bot_signin', 0), true)
+    assert.equal(shouldRetryYtdlp('bot_signin', 2), true)
+    assert.equal(shouldRetryYtdlp('bot_signin', YTDLP_MAX_ATTEMPTS - 1), false)
     assert.equal(shouldRetryYtdlp('age_restricted', 0), false)
   })
 
@@ -171,6 +191,13 @@ describe('playerClientForAttempt / backoff', () => {
     assert.equal(backoffMsBeforeAttempt(3), 8000)
     assert.equal(backoffMsBeforeAttempt(5), 8000)
   })
+
+  it('uses a short pause when the previous error was a bot check', () => {
+    assert.equal(backoffMsBeforeAttempt(1, 'bot_signin'), YTDLP_BOT_CLIENT_SWITCH_MS)
+    assert.equal(backoffMsBeforeAttempt(3, 'bot_signin'), YTDLP_BOT_CLIENT_SWITCH_MS)
+    assert.equal(backoffMsBeforeAttempt(1, 'retryable'), 1000)
+    assert.equal(backoffMsBeforeAttempt(0, 'bot_signin'), 0)
+  })
 })
 
 describe('formatYtdlpError', () => {
@@ -180,7 +207,18 @@ describe('formatYtdlpError', () => {
       'NCtzkaL2t_Y',
     )
     assert.match(msg, /HTTP 403/)
-    assert.match(msg, /NCtzkaL2t_Y/)
+    assert.match(msg, /cookies\.txt/)
+    assert.doesNotMatch(msg, /NCtzkaL2t_Y/)
+  })
+
+  it('maps 403 after cookies to a re-export hint', () => {
+    const msg = formatYtdlpError(
+      'ERROR: HTTP Error 403: Forbidden',
+      'abc',
+      { cookiesTried: true },
+    )
+    assert.match(msg, /HTTP 403/)
+    assert.match(msg, /Re-export cookies\.txt/)
   })
 
   it('maps outdated extractor signal', () => {
@@ -205,5 +243,47 @@ describe('formatYtdlpError', () => {
       formatYtdlpError('ERROR: Video unavailable', 'gone1'),
       /gone1 is unavailable/,
     )
+  })
+
+  it('maps bot check to Settings cookies copy without yt-dlp wiki dump', () => {
+    const faq = [
+      'ERROR: [youtube] QAnco5_C1d0: Sign in to confirm youre not a bot.',
+      'Use --cookies-from-browser or --cookies for the authentication.',
+      'See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp',
+    ].join(' ')
+    const msg = formatYtdlpError(faq, 'QAnco5_C1d0')
+    assert.match(msg, /Settings → Advanced/)
+    assert.match(msg, /cookies\.txt/)
+    assert.doesNotMatch(msg, /cookies-from-browser/)
+    assert.doesNotMatch(msg, /github\.com/)
+    assert.doesNotMatch(msg, /QAnco5_C1d0/)
+  })
+
+  it('maps bot check after cookies to a re-export hint', () => {
+    const msg = formatYtdlpError(
+      'ERROR: Sign in to confirm you’re not a bot',
+      'abc',
+      { cookiesTried: true },
+    )
+    assert.match(msg, /Re-export cookies\.txt/)
+    assert.match(msg, /download/)
+  })
+
+  it('maps lookup bot check with lookup wording', () => {
+    const msg = formatYtdlpError(
+      'ERROR: Sign in to confirm you’re not a bot',
+      'discovery',
+      { kind: 'lookup' },
+    )
+    assert.match(msg, /blocked this lookup/)
+    assert.match(msg, /Settings → Advanced/)
+  })
+
+  it('maps missing JS runtime (GUI PATH) before generic unavailable', () => {
+    const stderr = [
+      'WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default',
+      'ERROR: [youtube] abc: This video is not available',
+    ].join('\n')
+    assert.match(formatYtdlpError(stderr, 'abc'), /no JavaScript runtime/)
   })
 })

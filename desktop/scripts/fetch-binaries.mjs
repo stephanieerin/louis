@@ -34,7 +34,7 @@ const BIN_ROOT = path.join(ROOT, 'resources', 'bin')
  * Bump on YouTube breakage / before each `npm run release`.
  * @see https://github.com/yt-dlp/yt-dlp/releases
  */
-const YTDLP_TAG = '2026.07.04'
+const YTDLP_TAG = '2026.08.19'
 
 /**
  * Pin yt-dlp/FFmpeg-Builds autobuild (win/linux). Prefer `autobuild-…` over `latest`.
@@ -64,7 +64,7 @@ const PLATFORMS = {
     ytdlp: {
       kind: 'onedir-zip',
       url: ytdlpUrl('yt-dlp_macos.zip'),
-      sha256: 'b0724470a0cf6dae5175a87eee05d6e75c5a0c10d2c3015166bd4d34e92b1b7b',
+      sha256: '07e54b0865303c864006925913bce2604f8ee8cc6f18699bac9c309f9328a6d8',
       launcher: 'yt-dlp_macos',
       outName: 'yt-dlp',
     },
@@ -79,7 +79,7 @@ const PLATFORMS = {
     ytdlp: {
       kind: 'onedir-zip',
       url: ytdlpUrl('yt-dlp_macos.zip'),
-      sha256: 'b0724470a0cf6dae5175a87eee05d6e75c5a0c10d2c3015166bd4d34e92b1b7b',
+      sha256: '07e54b0865303c864006925913bce2604f8ee8cc6f18699bac9c309f9328a6d8',
       launcher: 'yt-dlp_macos',
       outName: 'yt-dlp',
     },
@@ -93,7 +93,7 @@ const PLATFORMS = {
     ytdlp: {
       kind: 'onedir-zip',
       url: ytdlpUrl('yt-dlp_linux.zip'),
-      sha256: 'd7d2d09e900b5ae11821b5784b18cf064984a2bd88b1ca5c798d744bcbe3658b',
+      sha256: '32e72032766bef9199d99d15beb69fd52e46df8f8b06f0d8745db59e04d339e9',
       launcher: 'yt-dlp_linux',
       outName: 'yt-dlp',
     },
@@ -108,7 +108,7 @@ const PLATFORMS = {
     ytdlp: {
       kind: 'onedir-zip',
       url: ytdlpUrl('yt-dlp_linux_aarch64.zip'),
-      sha256: '0554d39b22e039b4c0f70a492b9852870f281ed6a93eb75e78f150b32df76543',
+      sha256: '4e27ad43f3a34bacffd078694eb3edbb4e3b378e7da44edab2be02e98555516e',
       launcher: 'yt-dlp_linux_aarch64',
       outName: 'yt-dlp',
     },
@@ -123,7 +123,7 @@ const PLATFORMS = {
     ytdlp: {
       kind: 'onedir-zip',
       url: ytdlpUrl('yt-dlp_win.zip'),
-      sha256: '90254845be5282b1f4d843a873abff04f569f857f64250f833fe152b21eec152',
+      sha256: '30b4c14aafab6082becff7881e41b76df46dc43ea7633479410a91e29da492bf',
       launcher: 'yt-dlp.exe',
       outName: 'yt-dlp.exe',
     },

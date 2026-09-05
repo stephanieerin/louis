@@ -5,6 +5,12 @@ type ToolsStatus = {
   updateSupported: boolean
   ytdlp: { available: boolean, version?: string, managed?: boolean, error?: string }
   ffmpeg: { available: boolean, version?: string, error?: string }
+  ytdlpJsRuntime?: {
+    available: boolean
+    spec: string
+    version?: string
+    error?: string
+  }
   upstream?: { tag: string, url: string, newer: boolean, error?: string }
 }
 
@@ -109,6 +115,13 @@ const ffmpegVersion = computed(() => {
   if (!ffmpeg) return loading.value ? '…' : '—'
   if (!ffmpeg.available) return ffmpeg.error || 'Not found'
   return shortFfmpegVersion(ffmpeg.version)
+})
+
+const jsRuntimeVersion = computed(() => {
+  const js = status.value?.ytdlpJsRuntime
+  if (!js) return loading.value ? '…' : '—'
+  if (!js.available) return js.error || 'Not found'
+  return js.version || js.spec || 'ok'
 })
 
 function shortFfmpegVersion(raw?: string): string {
@@ -233,6 +246,13 @@ watch(
             class="type-label font-maru-bold"
           >ffmpeg</th>
           <td class="type-meta">{{ ffmpegVersion }}</td>
+        </tr>
+        <tr>
+          <th
+            scope="row"
+            class="type-label font-maru-bold"
+          >JS runtime</th>
+          <td class="type-meta">{{ jsRuntimeVersion }}</td>
         </tr>
       </tbody>
     </table>

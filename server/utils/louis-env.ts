@@ -35,6 +35,7 @@ export const LOUIS_ENV_BINDINGS = [
   { path: 'yotoRedirectUri', louis: 'LOUIS_YOTO_REDIRECT_URI', nuxt: 'NUXT_YOTO_REDIRECT_URI' },
   { path: 'ytdlpPath', louis: 'LOUIS_YTDLP_PATH', nuxt: 'NUXT_YTDLP_PATH' },
   { path: 'ytdlpCookiesFile', louis: 'LOUIS_YTDLP_COOKIES_FILE', nuxt: 'NUXT_YTDLP_COOKIES_FILE' },
+  { path: 'ytdlpJsRuntime', louis: 'LOUIS_YTDLP_JS_RUNTIME', nuxt: 'NUXT_YTDLP_JS_RUNTIME' },
   { path: 'audioWorkDir', louis: 'LOUIS_AUDIO_WORK_DIR', nuxt: 'NUXT_AUDIO_WORK_DIR' },
   { path: 'audioJobMaxAgeMs', louis: 'LOUIS_AUDIO_JOB_MAX_AGE_MS', nuxt: 'NUXT_AUDIO_JOB_MAX_AGE_MS' },
   { path: 'audioCacheMaxAgeMs', louis: 'LOUIS_AUDIO_CACHE_MAX_AGE_MS', nuxt: 'NUXT_AUDIO_CACHE_MAX_AGE_MS' },

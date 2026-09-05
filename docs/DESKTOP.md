@@ -49,7 +49,7 @@ You can change keys later under **Settings → Advanced** (including switching b
 
 ### Optional: yt-dlp cookies
 
-Not part of first-run setup. If YouTube blocks anonymous downloads (bot check / age gate), open **Settings → Advanced** and set a Netscape `cookies.txt` path (throwaway Google account preferred; never share or commit that file).
+Not part of first-run setup. A bot check is YouTube treating Louis’s downloader as a bot (IP/session), not a problem with that video. Wait a few minutes and try again — that often works on a home connection. If it keeps happening, open **Settings → Advanced** and set a Netscape `cookies.txt` path (throwaway Google account preferred; never share or commit that file).
 
 Louis may ship its **public** Yoto PKCE client ID inside the app. A **YouTube API key** (if you set one), OAuth tokens, and cookies stay only in your user data folder (see below) — never baked into the installer as secrets.
 
@@ -104,7 +104,7 @@ Sign-in uses browser cookies for `127.0.0.1:4010`. Clearing Settings does not cl
 Confirm the Yoto portal **Allowed Callback URLs** entry is exactly `http://127.0.0.1:4010/api/yoto/auth/callback` (loopback `127.0.0.1`, port **4010** — not Docker’s 4000). Desktop Connect uses your system browser; after success, close that tab and return to Louis (the app polls until signed in).
 
 **Search or download failures**  
-Search does not need a YouTube API key (yt-dlp). If you set one, check quota. For downloads, try cookies path if YouTube blocks anonymous extract. Keep Louis updated — releases refresh the bundled download tools.
+Search does not need a YouTube API key (yt-dlp). If you set one, check quota. A download bot check is an IP/session wall — try again shortly. If it keeps happening (or you are on a cloud host), set a `cookies.txt` path in Settings → Advanced. Keep Louis updated — releases refresh the bundled download tools.
 
 ## More
 

@@ -152,6 +152,8 @@ export default defineNuxtConfig({
     ytdlpPath: louisEnv.ytdlpPath,
     // Optional Netscape cookies.txt for yt-dlp (LOUIS_YTDLP_COOKIES_FILE). Anon-first; used on escalate.
     ytdlpCookiesFile: louisEnv.ytdlpCookiesFile,
+    /** yt-dlp `--js-runtimes` value (`node` or `node:/abs/shim` on desktop). */
+    ytdlpJsRuntime: louisEnv.ytdlpJsRuntime,
     audioWorkDir: louisEnv.audioWorkDir,
     audioJobMaxAgeMs: louisEnv.audioJobMaxAgeMs,
     audioCacheMaxAgeMs: louisEnv.audioCacheMaxAgeMs,

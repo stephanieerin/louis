@@ -9,6 +9,15 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Changed
+- YouTube bot checks retry anonymous player clients (android / ios / tv) before failing; search/import tries android once. Cookie escalate stays immediate when a cookies.txt is configured. Client switches after a bot check skip the 403/429 backoff.
+- Desktop bundled yt-dlp pin `2026.07.04` → `2026.08.19`.
+
+### Fixed
+- Desktop YouTube preview/Update for challenge-heavy videos (e.g. some long storyteller uploads) when launched from Finder/Start Menu — Nitro now passes yt-dlp an absolute Electron-as-node shim (`LOUIS_YTDLP_JS_RUNTIME`) so EJS works without Homebrew/`node` on the GUI PATH.
+- `/api/health` (and Settings → Advanced → Download tools) report `ytdlpJsRuntime` — missing Node/EJS runtime no longer hides behind “video unavailable.”
+- YouTube bot-check errors no longer dump yt-dlp’s `--cookies-from-browser` wiki. Toasts point at Settings → Advanced, or ask to re-export cookies.txt if a jar already failed.
+
 ## [1.2.2] - 2026-09-02
 
 ### Fixed

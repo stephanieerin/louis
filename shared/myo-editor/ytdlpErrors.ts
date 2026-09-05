@@ -16,6 +16,9 @@ export const YTDLP_COOKIE_FOLLOWUP_ATTEMPTS = 2
 /** Backoff between attempts 1→2, 2→3, 3→4 (+ cookie follow-ups reuse last). */
 export const YTDLP_RETRY_BACKOFF_MS = [1000, 3000, 8000] as const
 
+/** Brief pause when switching player clients after a bot check (not a rate-limit). */
+export const YTDLP_BOT_CLIENT_SWITCH_MS = 250
+
 /**
  * Player clients to try across attempts.
  * `null` = yt-dlp default (omit extractor-args).
@@ -33,8 +36,12 @@ export function playerClientForAttempt(attemptIndex: number): string | null {
   return YTDLP_PLAYER_CLIENT_SCHEDULE[index] ?? null
 }
 
-export function backoffMsBeforeAttempt(attemptIndex: number): number {
+export function backoffMsBeforeAttempt(
+  attemptIndex: number,
+  previousErrorClass?: YtdlpErrorClass,
+): number {
   if (attemptIndex <= 0) return 0
+  if (previousErrorClass === 'bot_signin') return YTDLP_BOT_CLIENT_SWITCH_MS
   return YTDLP_RETRY_BACKOFF_MS[attemptIndex - 1] ?? YTDLP_RETRY_BACKOFF_MS.at(-1)!
 }
 
@@ -70,11 +77,15 @@ export function shouldEscalateToCookies(
   return false
 }
 
+export function looksLikeBotSignin(text: string): boolean {
+  return /not a bot/i.test(text) || /cookies-from-browser/i.test(text)
+}
+
 export function classifyYtdlpStderr(stderr: string): YtdlpErrorClass {
   const detail = extractYtdlpErrorDetail(stderr)
   const text = `${detail ?? ''}\n${stderr}`
 
-  if (/sign in to confirm (you('|’)re|you are) not a bot/i.test(text)) {
+  if (looksLikeBotSignin(text)) {
     return 'bot_signin'
   }
 
@@ -137,7 +148,8 @@ export function classifyYtdlpStderr(stderr: string): YtdlpErrorClass {
 /**
  * Whether another yt-dlp attempt is warranted.
  * Outdated extractors get one alternate client only (2 attempts total).
- * bot_signin / age_restricted only rotate once cookies are already in use.
+ * bot_signin walks the player-client schedule (anon or cookies).
+ * age_restricted only rotates once cookies are already in use.
  */
 export function shouldRetryYtdlp(
   errorClass: YtdlpErrorClass,
@@ -148,15 +160,43 @@ export function shouldRetryYtdlp(
   const nextAttempt = attemptIndex + 1
   if (nextAttempt >= maxAttempts) return false
 
-  if (errorClass === 'retryable') return true
+  if (errorClass === 'retryable' || errorClass === 'bot_signin') return true
   if (errorClass === 'outdated') return attemptIndex === 0
-  if (options?.usingCookies && (errorClass === 'bot_signin' || errorClass === 'age_restricted')) {
+  if (options?.usingCookies && errorClass === 'age_restricted') {
     return true
   }
   return false
 }
 
-export function formatYtdlpError(stderr: string, youtubeId: string): string {
+export type FormatYtdlpErrorOptions = {
+  cookiesTried?: boolean
+  kind?: 'download' | 'lookup'
+}
+
+function botWallMessage(options?: FormatYtdlpErrorOptions): string {
+  const kind = options?.kind === 'lookup' ? 'lookup' : 'download'
+  if (options?.cookiesTried) {
+    return `YouTube still blocked this ${kind}. Re-export cookies.txt — the session may have expired.`
+  }
+  return `YouTube blocked this ${kind}. Try again in a few minutes, or add a cookies.txt in Settings → Advanced.`
+}
+
+function blocked403Message(options?: FormatYtdlpErrorOptions): string {
+  const kind = options?.kind === 'lookup' ? 'lookup' : 'download'
+  if (options?.cookiesTried) {
+    return `YouTube still blocked this ${kind} (HTTP 403). Re-export cookies.txt — the session may have expired.`
+  }
+  if (kind === 'lookup') {
+    return 'YouTube blocked this lookup (HTTP 403). Try again in a few minutes, or add a cookies.txt in Settings → Advanced.'
+  }
+  return 'YouTube blocked this download (HTTP 403). Try again shortly, or add a cookies.txt in Settings → Advanced.'
+}
+
+export function formatYtdlpError(
+  stderr: string,
+  youtubeId: string,
+  options?: FormatYtdlpErrorOptions,
+): string {
   const lines = stderr.split('\n').map(line => line.trim()).filter(Boolean)
   const detail = extractYtdlpErrorDetail(stderr)
   const errorClass = classifyYtdlpStderr(stderr)
@@ -165,8 +205,12 @@ export function formatYtdlpError(stderr: string, youtubeId: string): string {
     return `YouTube download failed for ${youtubeId}. yt-dlp is likely outdated — Settings → Advanced → Check for updates (Docker/desktop), or native: pip install -U --pre "yt-dlp[default]" / brew upgrade yt-dlp`
   }
 
+  if (/No supported JavaScript runtime could be found/i.test(stderr)) {
+    return `YouTube download failed for ${youtubeId}: no JavaScript runtime for yt-dlp. Desktop builds should provide an Electron node shim; Docker/native need node or deno on PATH.`
+  }
+
   if (errorClass === 'bot_signin') {
-    return `YouTube blocked the download for ${youtubeId} (bot check). Try again later.`
+    return botWallMessage(options)
   }
 
   if (errorClass === 'private') {
@@ -186,7 +230,7 @@ export function formatYtdlpError(stderr: string, youtubeId: string): string {
   }
 
   if (detail?.includes('HTTP Error 403') || stderr.includes('HTTP Error 403')) {
-    return `YouTube blocked the download for ${youtubeId} (HTTP 403). Try again shortly, or update yt-dlp.`
+    return blocked403Message(options)
   }
 
   if (detail) {

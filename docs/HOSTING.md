@@ -25,7 +25,7 @@ One-click and guided installs for Docker on NAS, homelab, and LAN. Louis also sh
 5. **Open Louis at that same origin** — phones/tablets cannot use the Docker host’s `localhost`. Use NAS IP or hostname.
 6. **`LOUIS_COOKIE_SECURE`** — image default is `false` (LAN HTTP). Set `true` only behind HTTPS / reverse proxy.
 7. **Optional:** `LOUIS_YOUTUBE_API_KEY` (faster search + safeSearch); unset uses bundled yt-dlp.
-8. **Health:** `GET /api/health` should return `status: ok` with yt-dlp and ffmpeg available.
+8. **Health:** `GET /api/health` should return `status: ok` with yt-dlp, ffmpeg, and a JS runtime (`ytdlpJsRuntime`) available.
 
 ### Do not
 

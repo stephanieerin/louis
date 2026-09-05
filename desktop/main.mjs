@@ -97,6 +97,38 @@ function resolveBundledTools() {
   }
 }
 
+/**
+ * yt-dlp EJS needs a Node binary. GUI-launched Electron has no Homebrew/system
+ * `node` on PATH, so we drop a shim that runs this process as Node
+ * (ELECTRON_RUN_AS_NODE=1) and pass `node:<shim>` to yt-dlp.
+ * @param {string} shimDir
+ * @param {string} electronPath
+ * @returns {string} Absolute path to the shim (unix `node` or win `node.cmd`)
+ */
+function ensureElectronNodeShim(shimDir, electronPath) {
+  fs.mkdirSync(shimDir, { recursive: true })
+  if (process.platform === 'win32') {
+    const shimPath = path.join(shimDir, 'node.cmd')
+    const content = [
+      '@echo off',
+      'set ELECTRON_RUN_AS_NODE=1',
+      `"${electronPath}" %*`,
+      '',
+    ].join('\r\n')
+    fs.writeFileSync(shimPath, content, 'utf8')
+    return shimPath
+  }
+  const shimPath = path.join(shimDir, 'node')
+  const content = [
+    '#!/bin/sh',
+    'export ELECTRON_RUN_AS_NODE=1',
+    `exec "${electronPath}" "$@"`,
+    '',
+  ].join('\n')
+  fs.writeFileSync(shimPath, content, { mode: 0o755, encoding: 'utf8' })
+  return shimPath
+}
+
 function loadDotEnv() {
   if (app.isPackaged) return
   const envPath = path.join(resolveAppRoot(), '.env')
@@ -160,10 +192,17 @@ function buildNitroEnv() {
   const audioDir = pickLouisEnv('LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR') || audioWorkDir
   setLouisAndNuxtEnv(env, 'LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR', audioDir)
   const managedBinDir = path.join(audioDir, 'bin')
-  const managedYtdlpName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
-  if (fs.existsSync(path.join(managedBinDir, managedYtdlpName))) {
-    env.PATH = [managedBinDir, env.PATH].filter(Boolean).join(path.delimiter)
-  }
+
+  // Electron-as-node shim for yt-dlp EJS (Finder/Start Menu PATH has no system node).
+  const nodeShimPath = ensureElectronNodeShim(managedBinDir, process.execPath)
+  env.PATH = [managedBinDir, env.PATH].filter(Boolean).join(path.delimiter)
+  setLouisAndNuxtEnv(
+    env,
+    'LOUIS_YTDLP_JS_RUNTIME',
+    'NUXT_YTDLP_JS_RUNTIME',
+    `node:${nodeShimPath}`,
+  )
+
   setLouisAndNuxtEnv(
     env,
     'LOUIS_YOTO_SESSION_FILE',
@@ -182,6 +221,7 @@ function buildNitroEnv() {
     binDir: tools.binDir,
     ytdlp: tools.ytdlpPath,
     ffmpeg: tools.ffmpegPath,
+    jsRuntime: `node:${nodeShimPath}`,
   })
   console.log('[louis-desktop] config', {
     path: configStore.configPath,

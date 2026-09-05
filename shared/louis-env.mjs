@@ -46,6 +46,8 @@ export const LOUIS_ENV_BINDINGS = [
   { path: 'yotoRedirectUri', louis: 'LOUIS_YOTO_REDIRECT_URI', nuxt: 'NUXT_YOTO_REDIRECT_URI' },
   { path: 'ytdlpPath', louis: 'LOUIS_YTDLP_PATH', nuxt: 'NUXT_YTDLP_PATH' },
   { path: 'ytdlpCookiesFile', louis: 'LOUIS_YTDLP_COOKIES_FILE', nuxt: 'NUXT_YTDLP_COOKIES_FILE' },
+  /** Full yt-dlp `--js-runtimes` value, e.g. `node:/path/to/shim` (desktop) or `node`. */
+  { path: 'ytdlpJsRuntime', louis: 'LOUIS_YTDLP_JS_RUNTIME', nuxt: 'NUXT_YTDLP_JS_RUNTIME' },
   { path: 'audioWorkDir', louis: 'LOUIS_AUDIO_WORK_DIR', nuxt: 'NUXT_AUDIO_WORK_DIR' },
   { path: 'audioJobMaxAgeMs', louis: 'LOUIS_AUDIO_JOB_MAX_AGE_MS', nuxt: 'NUXT_AUDIO_JOB_MAX_AGE_MS' },
   { path: 'audioCacheMaxAgeMs', louis: 'LOUIS_AUDIO_CACHE_MAX_AGE_MS', nuxt: 'NUXT_AUDIO_CACHE_MAX_AGE_MS' },
@@ -159,6 +161,7 @@ export function louisRuntimeConfigDefaults() {
     yotoRedirectUri: pickLouisEnv('LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI'),
     ytdlpPath: pickLouisEnv('LOUIS_YTDLP_PATH', 'NUXT_YTDLP_PATH') || 'yt-dlp',
     ytdlpCookiesFile: pickLouisEnv('LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE'),
+    ytdlpJsRuntime: pickLouisEnv('LOUIS_YTDLP_JS_RUNTIME', 'NUXT_YTDLP_JS_RUNTIME') || 'node',
     audioWorkDir: pickLouisEnv('LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR'),
     audioJobMaxAgeMs: Number(
       pickLouisEnv('LOUIS_AUDIO_JOB_MAX_AGE_MS', 'NUXT_AUDIO_JOB_MAX_AGE_MS') || 3_600_000,

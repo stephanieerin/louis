@@ -49,6 +49,15 @@ export type ToolsStatus = {
   updateSupported: boolean
   ytdlp: ToolsBinaryView
   ffmpeg: ToolsBinaryView
+  /** yt-dlp EJS runtime (node shim on desktop). */
+  ytdlpJsRuntime: {
+    available: boolean
+    spec: string
+    runtime?: string
+    path?: string
+    version?: string
+    error?: string
+  }
   upstream?: ToolsUpstream
 }
 
@@ -199,6 +208,14 @@ export async function getToolsStatus(event: H3Event, options?: { check?: boolean
       path: deps.ffmpeg.path,
       version: deps.ffmpeg.version,
       error: deps.ffmpeg.error,
+    },
+    ytdlpJsRuntime: {
+      available: deps.ytdlpJsRuntime.available,
+      spec: deps.ytdlpJsRuntime.spec,
+      runtime: deps.ytdlpJsRuntime.runtime,
+      path: deps.ytdlpJsRuntime.path,
+      version: deps.ytdlpJsRuntime.version,
+      error: deps.ytdlpJsRuntime.error,
     },
   }
 

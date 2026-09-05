@@ -15,6 +15,7 @@ import {
   shouldRetryYtdlp,
   YTDLP_COOKIE_FOLLOWUP_ATTEMPTS,
   YTDLP_MAX_ATTEMPTS,
+  type YtdlpErrorClass,
 } from '#shared/myo-editor/ytdlpErrors'
 import {
   cleanupJobTempDir,
@@ -24,6 +25,7 @@ import {
   type AudioCacheMode,
 } from './audio-work-dir'
 import { resolveYtdlpCookiesArgs } from './ytdlp-cookies'
+import { ytdlpJsRuntimeArgs } from './ytdlp-js-runtime'
 import { checkYoutubeVideoAvailability } from './youtube'
 import { resolveYtdlpBinary } from './ytdlp-binary'
 
@@ -109,6 +111,7 @@ function buildYtdlpArgs(options: {
   transcode: boolean
   playerClient: string | null
   cookiesArgs?: string[]
+  jsRuntimeArgs?: string[]
 }): string[] {
   const args = [
     '-f', 'ba/b',
@@ -118,8 +121,8 @@ function buildYtdlpArgs(options: {
   if (options.transcode) {
     args.splice(2, 0, '-x', '--audio-format', 'm4a')
   }
-  // YouTube player JS for nsig / anti-bot; Node is on PATH (app + Docker base image).
-  args.push('--js-runtimes', 'node')
+  // YouTube EJS challenges — desktop passes `node:<Electron shim>` (GUI PATH has no node).
+  args.push(...(options.jsRuntimeArgs?.length ? options.jsRuntimeArgs : ['--js-runtimes', 'node']))
   if (options.cookiesArgs?.length) {
     args.push(...options.cookiesArgs)
   }
@@ -250,6 +253,7 @@ async function downloadYoutubeAudioUncached(
   const videoUrl = `https://www.youtube.com/watch?v=${youtubeId}`
   // Anon-first: escalate to --cookies only on bot / hard 403 / age-restricted.
   const cookiesArgs = await resolveYtdlpCookiesArgs(event)
+  const jsRuntimeArgs = ytdlpJsRuntimeArgs(event)
   const hasCookies = cookiesArgs.length > 0
   let useCookies = false
   let escalatedToCookies = false
@@ -259,11 +263,12 @@ async function downloadYoutubeAudioUncached(
 
   let lastStderr = ''
   let recoveredFromRetryableFailure = false
+  let previousErrorClass: YtdlpErrorClass | undefined
 
   try {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const playerClient = playerClientForAttempt(attempt)
-      const waitMs = backoffMsBeforeAttempt(attempt)
+      const waitMs = backoffMsBeforeAttempt(attempt, previousErrorClass)
       if (waitMs > 0) await sleep(waitMs)
 
       await clearJobDirContents(jobDir)
@@ -274,6 +279,7 @@ async function downloadYoutubeAudioUncached(
         transcode: options.transcode,
         playerClient,
         cookiesArgs: useCookies ? cookiesArgs : undefined,
+        jsRuntimeArgs,
       })
 
       try {
@@ -292,8 +298,10 @@ async function downloadYoutubeAudioUncached(
         const stderr = e.stderr ?? e.message ?? ''
         lastStderr = stderr
         const errorClass = classifyYtdlpStderr(stderr)
+        previousErrorClass = errorClass
         const clientLabel = playerClient ?? 'default'
         const authLabel = useCookies ? 'cookies' : 'anon'
+        const cookiesTried = useCookies || escalatedToCookies
 
         if (!useCookies && hasCookies && shouldEscalateToCookies(errorClass, stderr)) {
           useCookies = true
@@ -321,7 +329,7 @@ async function downloadYoutubeAudioUncached(
         console.error(
           `[yt-dlp] fail videoId=${youtubeId} mode=${cacheMode} auth=${authLabel} class=${errorClass} escalated=${escalatedToCookies}`,
         )
-        throw httpError(502, formatYtdlpError(stderr, youtubeId))
+        throw httpError(502, formatYtdlpError(stderr, youtubeId, { cookiesTried }))
       }
 
       const files = await readdir(jobDir)
@@ -371,7 +379,9 @@ async function downloadYoutubeAudioUncached(
     console.error(
       `[yt-dlp] fail videoId=${youtubeId} mode=${cacheMode} auth=${useCookies ? 'cookies' : 'anon'} class=${lastStderr ? classifyYtdlpStderr(lastStderr) : 'exhausted'} escalated=${escalatedToCookies}`,
     )
-    throw httpError(502, formatYtdlpError(lastStderr || 'ERROR: retries exhausted', youtubeId))
+    throw httpError(502, formatYtdlpError(lastStderr || 'ERROR: retries exhausted', youtubeId, {
+      cookiesTried: useCookies || escalatedToCookies,
+    }))
   }
   finally {
     await cleanupJobTempDir(jobDir)

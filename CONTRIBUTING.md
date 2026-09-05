@@ -29,7 +29,7 @@ Automated: `npm test` and `npm run build`. Then walk on phone + desktop (and one
 5. **Normalize** — opt-in at Update; only new extracts leveled
 6. **Playlist artwork** — DiceBear on create; menu Artwork generate/upload/crop
 7. **Save reliability** — multi-track split; normalize + split; batch Update from phone Menu
-8. **Auth / env** — reconnect for `user:icons:manage`; `/api/health` shows yt-dlp + ffmpeg
+8. **Auth / env** — reconnect for `user:icons:manage`; `/api/health` shows yt-dlp + ffmpeg + JS runtime (node)
 9. **Narrow phone** — quick pass at ≤310px on Search / Library / Update / Menu
 
 ## Releases
@@ -42,7 +42,7 @@ Open a GitHub issue with:
 
 - Steps to reproduce
 - Expected vs actual behavior
-- Environment (Docker vs native, OS, yt-dlp/ffmpeg versions and `ytdlpCookies` from `/api/health`)
+- Environment (Docker vs native, OS, yt-dlp/ffmpeg/JS runtime versions and `ytdlpCookies` from `/api/health`)
 
 ## Security
 

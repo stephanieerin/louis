@@ -9,6 +9,10 @@ import {
   type YtdlpCookiesStatus,
 } from './ytdlp-cookies'
 import { findYtdlpBinary } from './ytdlp-binary'
+import {
+  resolveYtdlpJsRuntimeStatus,
+  type YtdlpJsRuntimeStatus,
+} from './ytdlp-js-runtime'
 
 const execFileAsync = promisify(execFile)
 
@@ -22,6 +26,8 @@ export interface BinaryStatus {
 export interface SystemDepsStatus {
   ytdlp: BinaryStatus
   ffmpeg: BinaryStatus
+  /** Node/deno (etc.) yt-dlp uses for YouTube EJS — desktop ships an Electron shim. */
+  ytdlpJsRuntime: YtdlpJsRuntimeStatus
   audioWorkDir: {
     path: string
     writable: boolean
@@ -125,9 +131,10 @@ export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsSt
   const audioConfig = resolveAudioWorkDirConfig(event)
   const audioWorkDir = audioConfig.audioWorkDir
 
-  const [foundYtdlp, ffmpeg, audioDir, audioCache, ytdlpCookies] = await Promise.all([
+  const [foundYtdlp, ffmpeg, ytdlpJsRuntime, audioDir, audioCache, ytdlpCookies] = await Promise.all([
     findYtdlpBinary(event),
     resolveFfmpegStatus(),
+    resolveYtdlpJsRuntimeStatus(event),
     checkWritableDir(audioWorkDir),
     getAudioWorkDirStats(audioWorkDir, audioConfig.audioJobMaxAgeMs),
     getYtdlpCookiesStatus(event),
@@ -140,6 +147,7 @@ export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsSt
   return {
     ytdlp,
     ffmpeg,
+    ytdlpJsRuntime,
     audioWorkDir: {
       path: audioWorkDir,
       writable: audioDir.writable,
@@ -153,5 +161,6 @@ export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsSt
 export function isSystemReady(status: SystemDepsStatus): boolean {
   return status.ytdlp.available
     && status.ffmpeg.available
+    && status.ytdlpJsRuntime.available
     && status.audioWorkDir.writable
 }

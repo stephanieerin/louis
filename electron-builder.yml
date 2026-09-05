@@ -10,9 +10,9 @@
   },
   "beforeBuild": "desktop/electron-before-build.cjs",
   "files": [
-    "main.mjs",
+    "*.mjs",
+    "!*.test.mjs",
     "preload.cjs",
-    "configStore.mjs",
     "loading.html",
     "icons/**/*",
     "package.json"

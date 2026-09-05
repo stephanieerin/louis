@@ -9,6 +9,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Fixed
+- Pack `desktop/*.mjs` (except tests) into the Electron asar so Windows/mac installers can import `js-runtime.mjs` / `nitro-health.mjs`. 1.2.4 crashed on launch: `Cannot find module …/app.asar/js-runtime.mjs`.
+
 ## [1.2.4] - 2026-09-05
 
 ### Fixed

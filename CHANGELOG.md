@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-09-05
+
 ### Fixed
 - Windows desktop no longer fails to start with Nitro health 503 because the JS-runtime probe could not run `node.cmd` ([#26](https://github.com/stuartromanek/louis/issues/26)). Health uses the Electron-as-node process (and `Louis.exe` for yt-dlp); a degraded `/api/health` now shows the failed check in the startup dialog.
 
@@ -165,7 +167,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.3...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.4...main
+[1.2.4]: https://github.com/stuartromanek/louis/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/stuartromanek/louis/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/stuartromanek/louis/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/stuartromanek/louis/compare/v1.2.0...v1.2.1

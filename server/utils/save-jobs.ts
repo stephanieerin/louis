@@ -27,6 +27,7 @@ import {
   withMappedYotoLimitError,
 } from '#shared/myo-editor/yotoMyoLimits'
 import { downloadYoutubeAudio } from './youtube-download'
+import { findIngestedLocalAudioFile } from './local-audio-upload'
 import { hashFileSha256, pollPutAudioTranscode, putAudioForTranscode } from './yoto-media'
 import { loudnormAudioFile } from './ffmpeg-loudnorm'
 import { probeAudioDurationSeconds, splitAudioFile } from './ffmpeg-split'
@@ -237,6 +238,10 @@ async function runSaveJob(
     let reuseActions = workingPlan.tracks.filter(
       action => action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream',
     )
+    let uploadActions = workingPlan.tracks.filter(
+      (action): action is Extract<SaveTrackAction, { kind: 'upload-local-audio' }> =>
+        action.kind === 'upload-local-audio',
+    )
 
     const OVERALL_START = 2
     const OVERALL_TRACKS_END = 90
@@ -322,6 +327,10 @@ async function runSaveJob(
       )
       reuseActions = workingPlan.tracks.filter(
         action => action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream',
+      )
+      uploadActions = workingPlan.tracks.filter(
+        (action): action is Extract<SaveTrackAction, { kind: 'upload-local-audio' }> =>
+          action.kind === 'upload-local-audio',
       )
     }
 
@@ -750,6 +759,76 @@ async function runSaveJob(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
     )
     if (groupFailure) throw groupFailure.reason
+
+    if (uploadActions.length > 0) {
+      const uploadPreparedByIndex = new Map<
+        number,
+        { filePath: string, filename: string, durationSeconds?: number }
+      >()
+
+      async function prepareUploadPart(index: number) {
+        const action = uploadActions[index]!
+        const track = workingPlaylist[action.playlistIndex]
+        updateTrack(job, action.playlistIndex, 'extracting')
+        const ingested = await findIngestedLocalAudioFile(audioWorkDir, action.localFileRef)
+        if (!ingested) {
+          throw createError({
+            statusCode: 500,
+            message: `Upload for "${track?.title ?? 'track'}" expired — please re-upload.`,
+          })
+        }
+        if (!acknowledgeCapacityRisk) {
+          const fileStat = await stat(ingested.filePath)
+          const mediaError = getTrackMediaLimitError({
+            title: track?.title ?? 'Uploaded track',
+            duration: track?.duration,
+            fileSize: fileStat.size,
+          })
+          if (mediaError) {
+            throw createError({ statusCode: 413, message: mediaError })
+          }
+        }
+        const prepared = {
+          filePath: ingested.filePath,
+          filename: ingested.filename,
+          durationSeconds: track?.duration,
+        }
+        uploadPreparedByIndex.set(index, prepared)
+        return prepared
+      }
+
+      await pipeline.run(uploadActions.length, {
+        prepare: prepareUploadPart,
+        put: async (index, prepared) => {
+          const action = uploadActions[index]!
+          updateTrack(job, action.playlistIndex, 'uploading')
+          return putAudioForTranscode(accessToken, prepared.filePath, prepared.filename, {
+            meta: {
+              jobId,
+              title: workingPlaylist[action.playlistIndex]?.title ?? prepared.filename,
+              durationSeconds: prepared.durationSeconds,
+            },
+          })
+        },
+        poll: async (index, putResult) => {
+          const action = uploadActions[index]!
+          const prepared = uploadPreparedByIndex.get(index)
+          const transcoded = await pollPutAudioTranscode(accessToken, putResult, {
+            meta: {
+              jobId,
+              title: workingPlaylist[action.playlistIndex]?.title ?? 'Uploaded track',
+              durationSeconds: prepared?.durationSeconds,
+            },
+            withPutSlot: fn => pipeline.withPutSlot(fn),
+            onTranscodePoll: () => {
+              updateTrack(job, action.playlistIndex, 'transcoding')
+            },
+          })
+          finishExtractedPart(action.playlistIndex, transcoded)
+          return transcoded
+        },
+      })
+    }
 
     const extractCount = extractActions.length
 

@@ -32,3 +32,20 @@ export function pickerVideoToPlaylistTrack(video: YoutubeVideoSummary): Playlist
 export function videosToPlaylistTracks(videos: YoutubeVideoSummary[]): PlaylistTrack[] {
   return videos.flatMap(pickerVideoToPlaylistTracks)
 }
+
+export function localUploadToPlaylistTrack(result: {
+  fileRef: string
+  filename: string
+  title: string
+  durationSeconds?: number
+}): PlaylistTrack {
+  return {
+    id: `local:${result.fileRef}`,
+    title: result.title,
+    subtitle: 'Uploaded MP3',
+    thumbnailUrl: '',
+    source: 'local-upload',
+    localFileRef: result.fileRef,
+    duration: result.durationSeconds,
+  }
+}

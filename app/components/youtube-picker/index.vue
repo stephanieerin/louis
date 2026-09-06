@@ -10,6 +10,10 @@ import { useYoutubePicker, YOUTUBE_PICKER_RESULTS_KEY } from './useYoutubePicker
 import YoutubePickerResultsPane from './YoutubePickerResultsPane.vue'
 import YoutubePickerSearch from './YoutubePickerSearch.vue'
 import { useYoutubeAudioPlayer, YOUTUBE_AUDIO_PLAYER_KEY } from './useYoutubeAudioPlayer'
+import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
+import { localUploadToPlaylistTrack } from '~/components/playlist/types'
+import { MP3_UPLOAD_ACCEPT, validateMp3Upload } from '~/components/audio-upload/validateMp3Upload'
+import { localAudioUploadError, uploadLocalAudioFile } from '~/components/audio-upload/uploadLocalAudio'
 
 const props = withDefaults(defineProps<{
   placeholders?: string[]
@@ -39,6 +43,10 @@ const searchPlaceholders = computed(
 const containerRef = ref<HTMLElement | null>(null)
 const audioPlayer = useYoutubeAudioPlayer()
 provide(YOUTUBE_AUDIO_PLAYER_KEY, audioPlayer)
+
+const editor = inject(MYO_EDITOR_KEY, null)
+const mp3FileInputRef = ref<HTMLInputElement | null>(null)
+const uploadingMp3 = ref(false)
 
 const {
   query,
@@ -99,6 +107,37 @@ async function onSelect(id: string) {
   await selectVideo(id)
 }
 
+function openMp3FilePicker() {
+  mp3FileInputRef.value?.click()
+}
+
+async function onMp3FileChosen(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  input.value = ''
+  if (!file || !editor) return
+
+  const validation = validateMp3Upload(file)
+  if (!validation.ok) {
+    showError(validation.error ?? 'Choose an MP3 file.')
+    return
+  }
+
+  uploadingMp3.value = true
+  try {
+    const uploaded = await uploadLocalAudioFile(file)
+    const track = localUploadToPlaylistTrack(uploaded)
+    const result = editor.insertTracks([track])
+    if (!result.ok) showError(result.message)
+  }
+  catch (err) {
+    showError(localAudioUploadError(err, 'Could not upload that file.'))
+  }
+  finally {
+    uploadingMp3.value = false
+  }
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (results.value.length === 0) return
   if (event.target instanceof HTMLInputElement) return
@@ -140,15 +179,31 @@ onUnmounted(() => {
     class="yt-picker"
     :class="embedded ? 'relative flex flex-col gap-2 sm:gap-3 h-full min-h-0' : 'relative'"
   >
-    <div :class="embedded ? 'shrink-0' : ''">
+    <div :class="embedded ? 'shrink-0 flex items-start gap-2' : 'flex items-start gap-2'">
       <YoutubePickerSearch
         v-model="query"
         :placeholders="searchPlaceholders"
         :embedded="embedded"
         :clearable="Boolean(submittedQuery.trim())"
+        class="flex-1 min-w-0"
         @submit="onSearchSubmit"
         @clear="onClearSearch"
       />
+      <input
+        ref="mp3FileInputRef"
+        type="file"
+        :accept="MP3_UPLOAD_ACCEPT"
+        class="sr-only"
+        @change="onMp3FileChosen"
+      >
+      <button
+        type="button"
+        class="shrink-0 border-maru rounded-maru bg-maru-turquoise-lighter text-maru-black font-maru-bold px-3 py-2 transition-[scale,opacity] active:scale-[0.96] disabled:opacity-60"
+        :disabled="uploadingMp3"
+        @click="openMp3FilePicker"
+      >
+        {{ uploadingMp3 ? 'Uploading…' : 'Upload MP3' }}
+      </button>
     </div>
 
     <div :class="embedded ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : ''">

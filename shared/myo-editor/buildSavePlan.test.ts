@@ -249,3 +249,30 @@ describe('split YouTube groups', () => {
     assert.equal(plan.tracks.every(action => action.kind === 'extract-youtube'), true)
   })
 })
+
+describe('local-upload tracks', () => {
+  function uploadTrack(overrides: Partial<PlaylistTrack> = {}): PlaylistTrack {
+    return {
+      id: 'local:abc',
+      title: 'My Upload',
+      subtitle: 'Uploaded MP3',
+      thumbnailUrl: '',
+      source: 'local-upload',
+      localFileRef: 'abc',
+      ...overrides,
+    }
+  }
+
+  it('classifies a fresh upload as upload-local-audio', () => {
+    const plan = buildSavePlan([], [uploadTrack()], EMPTY_CARD_DETAIL)
+    assert.equal(plan.errors.length, 0)
+    assert.equal(plan.tracks[0]?.kind, 'upload-local-audio')
+    assert.equal((plan.tracks[0] as { localFileRef?: string }).localFileRef, 'abc')
+  })
+
+  it('is unsupported when the file reference is missing', () => {
+    const plan = buildSavePlan([], [uploadTrack({ localFileRef: undefined })], EMPTY_CARD_DETAIL)
+    assert.equal(plan.tracks[0]?.kind, 'unsupported')
+    assert.ok(plan.errors[0]?.includes('My Upload'))
+  })
+})

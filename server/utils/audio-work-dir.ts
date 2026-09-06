@@ -9,6 +9,8 @@ export type AudioCacheMode = (typeof AUDIO_CACHE_MODES)[number]
 export const DEFAULT_AUDIO_JOB_MAX_AGE_MS = 3_600_000
 export const DEFAULT_AUDIO_CACHE_MAX_AGE_MS = 1_209_600_000
 export const DEFAULT_AUDIO_CACHE_MAX_BYTES = 5_368_709_120
+/** Uploaded MP3s live outside the preview/save cache modes, swept on their own short clock. */
+export const DEFAULT_LOCAL_UPLOAD_MAX_AGE_MS = 86_400_000
 
 export interface AudioWorkDirConfig {
   audioWorkDir: string
@@ -58,6 +60,40 @@ export function getCacheDir(audioWorkDir: string, mode: AudioCacheMode): string 
 
 export function getJobsDir(audioWorkDir: string): string {
   return path.join(audioWorkDir, 'jobs')
+}
+
+/** Outside AUDIO_CACHE_MODES on purpose: immune to sweepAudioCache's age/size sweep. */
+export function getUploadsDir(audioWorkDir: string): string {
+  return path.join(audioWorkDir, 'cache', 'uploads')
+}
+
+/** Local-upload files aren't re-downloaded on retry, so a short age-only sweep is enough. */
+export async function sweepStaleUploads(
+  audioWorkDir: string,
+  maxAgeMs: number,
+): Promise<number> {
+  const dir = getUploadsDir(audioWorkDir)
+  const now = Date.now()
+  let swept = 0
+
+  try {
+    const entries = await readdir(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isFile()) continue
+
+      const filePath = path.join(dir, entry.name)
+      const fileStat = await stat(filePath)
+      if (now - fileStat.mtimeMs > maxAgeMs) {
+        await rm(filePath, { force: true }).catch(() => {})
+        swept++
+      }
+    }
+  }
+  catch {
+    // uploads dir may not exist yet
+  }
+
+  return swept
 }
 
 export async function cleanupJobTempDir(jobDir: string): Promise<void> {
@@ -242,16 +278,19 @@ export async function runAudioWorkDirMaintenance(event?: H3Event): Promise<void>
   const migrated = await migrateFlatCacheLayout(config.audioWorkDir)
   const sweptJobs = await sweepOrphanedJobDirs(config.audioWorkDir, config.audioJobMaxAgeMs)
   const cacheResult = await sweepAudioCache(config.audioWorkDir, config)
+  const sweptUploads = await sweepStaleUploads(config.audioWorkDir, DEFAULT_LOCAL_UPLOAD_MAX_AGE_MS)
 
   if (
     migrated > 0
     || sweptJobs > 0
     || cacheResult.deletedByAge > 0
     || cacheResult.deletedByCap > 0
+    || sweptUploads > 0
   ) {
     console.info('[audio-work-dir] startup maintenance', {
       migrated,
       sweptJobs,
+      sweptUploads,
       ...cacheResult,
     })
   }

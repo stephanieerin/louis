@@ -115,6 +115,20 @@ export function playlistToYotoContent(
         split: playlistTrack.split ?? action.split,
       })
     }
+    else if (action.kind === 'upload-local-audio') {
+      const transcoded = uploadedByIndex.get(i)
+      if (!transcoded) {
+        throw new Error(`Missing upload result for track "${playlistTrack.title}"`)
+      }
+      // No provenance entry: there is no youtubeId to re-derive on reload, so this
+      // track round-trips as a plain 'yoto-upload' (already-hosted, reuse-as-is) row.
+      payload = trackFromTranscoded(
+        playlistTrack.title,
+        chapterOverlayLabel,
+        transcoded,
+        displays.track,
+      )
+    }
     else if (action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream') {
       payload = {
         ...toYotoTrackPayload(

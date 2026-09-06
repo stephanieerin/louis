@@ -83,6 +83,22 @@ function classifyTrack(
     return { kind: 'reuse-yoto', snapshot, playlistIndex: index }
   }
 
+  if (track.source === 'local-upload') {
+    if (!track.localFileRef) {
+      return {
+        kind: 'unsupported',
+        reason: `Uploaded track "${track.title}" is missing its file reference.`,
+        playlistIndex: index,
+      }
+    }
+    return {
+      kind: 'upload-local-audio',
+      localFileRef: track.localFileRef,
+      playlistIndex: index,
+      split: track.split,
+    }
+  }
+
   const youtubeId = track.youtubeId ?? (track.source === 'app-youtube' ? track.id : undefined)
 
   if (track.source === 'youtube-url') {

@@ -16,6 +16,7 @@ import {
   incomingTrackBlocks,
   isCompleteSplitCopy,
   isCompleteSplitGroup,
+  isValidTrackSplit,
   movePlaylistBlock,
   planTrackSplit,
   playlistBlocks,
@@ -266,6 +267,56 @@ describe('scaleSplitParts / expandUnsplitTrack', () => {
     const replanned = applyProbedDurations([p0, p1], new Map([['short', 8000]]))
     assert.equal(replanned.length, 3)
     assert.ok(replanned.every(item => (item.split?.durationSeconds ?? 0) <= YOTO_MYO_MAX_TRACK_SECONDS))
+  })
+
+  it('leaves chapter-split groups untouched even when the probed duration drifts', () => {
+    const c0 = track({
+      id: 'vid#c0',
+      youtubeId: 'vid',
+      title: 'Intro',
+      duration: 120,
+      split: {
+        groupId: 'vid', index: 0, count: 2, startSeconds: 0, durationSeconds: 120,
+        sourceDurationSeconds: 300, kind: 'chapters',
+      },
+    })
+    const c1 = track({
+      id: 'vid#c1',
+      youtubeId: 'vid',
+      title: 'Song One',
+      duration: 180,
+      split: {
+        groupId: 'vid', index: 1, count: 2, startSeconds: 120, durationSeconds: 180,
+        sourceDurationSeconds: 300, kind: 'chapters',
+      },
+    })
+    // Probed duration (301) differs slightly from the planned sourceDurationSeconds (300),
+    // which would trigger a regenerate-as-equal-slices replan for an 'auto' split group.
+    const result = applyProbedDurations([c0, c1], new Map([['vid', 301]]))
+    assert.deepEqual(result, [c0, c1])
+  })
+})
+
+describe('isValidTrackSplit', () => {
+  function split(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      groupId: 'vid',
+      index: 0,
+      count: 2,
+      startSeconds: 0,
+      durationSeconds: 120,
+      ...overrides,
+    }
+  }
+
+  it('accepts a split with no kind, or kind auto/chapters', () => {
+    assert.equal(isValidTrackSplit(split()), true)
+    assert.equal(isValidTrackSplit(split({ kind: 'auto' })), true)
+    assert.equal(isValidTrackSplit(split({ kind: 'chapters' })), true)
+  })
+
+  it('rejects an unrecognized kind', () => {
+    assert.equal(isValidTrackSplit(split({ kind: 'bogus' })), false)
   })
 })
 

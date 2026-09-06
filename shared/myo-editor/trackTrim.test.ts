@@ -85,6 +85,34 @@ describe('canTrimTrack', () => {
     assert.equal(canTrimTrack(track({ source: 'stream' })), false)
     assert.equal(canTrimTrack(track({ source: 'yoto-upload', youtubeId: undefined })), false)
   })
+
+  it('rejects a chapter-split group even though it is YouTube-sourced', () => {
+    const chapterRow = track({
+      split: {
+        groupId: 'abcdefghijk',
+        index: 0,
+        count: 2,
+        startSeconds: 0,
+        durationSeconds: 60,
+        kind: 'chapters',
+      },
+    })
+    assert.equal(canTrimTrack(chapterRow), false)
+  })
+
+  it('still allows an auto-split group', () => {
+    const autoRow = track({
+      split: {
+        groupId: 'abcdefghijk',
+        index: 0,
+        count: 2,
+        startSeconds: 0,
+        durationSeconds: 60,
+        kind: 'auto',
+      },
+    })
+    assert.equal(canTrimTrack(autoRow), true)
+  })
 })
 
 describe('effectiveCutRange', () => {

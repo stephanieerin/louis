@@ -2,6 +2,7 @@ export type TrackSource =
   | 'app-youtube'
   | 'youtube-url'
   | 'yoto-upload'
+  | 'local-upload'
   | 'stream'
   | 'unknown'
 
@@ -79,6 +80,8 @@ export interface TrackSplit {
   durationSeconds: number
   /** Full YouTube file length; keep-region is `trim` on the same row. */
   sourceDurationSeconds?: number
+  /** Absent/'auto' = equal-duration auto-split; 'chapters' = real YouTube chapter markers. */
+  kind?: 'auto' | 'chapters'
 }
 
 export interface PlaylistTrack {
@@ -104,6 +107,8 @@ export interface PlaylistTrack {
     startSeconds: number
     endSeconds: number
   }
+  /** Content-hash reference into the server's upload cache; set when source is 'local-upload'. */
+  localFileRef?: string
 }
 
 export interface ProvenanceTrackEntry {
@@ -136,6 +141,7 @@ export type SaveTrackAction =
   | { kind: 'extract-youtube'; youtubeId: string; playlistIndex: number; split?: TrackSplit }
   | { kind: 'reuse-yoto'; snapshot: YotoTrackReuseSnapshot; playlistIndex: number }
   | { kind: 'passthrough-stream'; snapshot: YotoTrackReuseSnapshot; playlistIndex: number }
+  | { kind: 'upload-local-audio'; localFileRef: string; playlistIndex: number; split?: TrackSplit }
   | { kind: 'unsupported'; reason: string; playlistIndex: number }
 
 export interface SavePlan {

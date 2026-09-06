@@ -15,7 +15,7 @@ import {
   projectedPlaylistTrackCount,
 } from './yotoMyoLimits.ts'
 
-const PART_TITLE_MAX = 100
+export const PART_TITLE_MAX = 100
 
 export interface SplitPartRange {
   start: number
@@ -128,6 +128,7 @@ export function isValidTrackSplit(value: unknown): value is TrackSplit {
     && split.durationSeconds > 0
     && (split.sourceDurationSeconds === undefined
       || (Number.isFinite(split.sourceDurationSeconds) && split.sourceDurationSeconds > 0))
+    && (split.kind === undefined || split.kind === 'auto' || split.kind === 'chapters')
 }
 
 export function playlistBlocks(playlist: PlaylistTrack[]): PlaylistBlock[] {
@@ -512,6 +513,10 @@ export function applyProbedDurations(
   for (const block of playlistBlocks(playlist)) {
     if (block.kind === 'split') {
       const first = block.tracks[0]!
+      if (first.split?.kind === 'chapters') {
+        out.push(...block.tracks)
+        continue
+      }
       const youtubeId = first.youtubeId?.trim()
       const actual = youtubeId ? durationByYoutubeId.get(youtubeId) : undefined
       if (!actual) {

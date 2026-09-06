@@ -3,9 +3,11 @@ import type { PlaylistTrack } from '~/components/playlist/types'
 import TrackArtThumb from '~/components/track-art/TrackArtThumb.vue'
 import { TRACK_ART_EDITOR_KEY } from '~/composables/useTrackArtEditor'
 import { TRACK_TRIM_EDITOR_KEY } from '~/composables/useTrackTrimEditor'
+import { TRACK_CHAPTER_SPLIT_KEY } from '~/composables/useTrackChapterSplitEditor'
 import { formatDurationSeconds } from '#shared/myo-editor/youtubeDuration'
 import { splitTrackAccessibleName } from '#shared/myo-editor/splitTrack'
 import { canTrimTrack, isTrimmed, trimmedDurationSeconds } from '#shared/myo-editor/trackTrim'
+import { canChapterSplitTrack } from '#shared/myo-editor/youtubeChapters'
 
 const props = defineProps<{
   track: PlaylistTrack
@@ -23,6 +25,7 @@ const emit = defineEmits<{
 
 const artEditor = inject(TRACK_ART_EDITOR_KEY)
 const trimEditor = inject(TRACK_TRIM_EDITOR_KEY)
+const chapterSplitEditor = inject(TRACK_CHAPTER_SPLIT_KEY, null)
 const { playEvent } = useUiSound()
 
 function onRemoveHover() {
@@ -40,7 +43,14 @@ function onTrim() {
   trimEditor?.openForTrack(props.track.id)
 }
 
+function onChapterSplit() {
+  if (props.locked || !canChapterSplit.value) return
+  playEvent('buttonClick')
+  chapterSplitEditor?.openForTrack(props.track.id)
+}
+
 const canTrim = computed(() => canTrimTrack(props.track))
+const canChapterSplit = computed(() => canChapterSplitTrack(props.track))
 
 const durationLabel = computed(() => {
   const seconds = trimmedDurationSeconds(props.track)
@@ -94,6 +104,19 @@ const partLine = computed(() => {
       @click="onTrim"
     >
       <MaruEmoji name="Scissors" size="md" />
+    </button>
+
+    <button
+      v-if="canChapterSplit && !hideTrim"
+      type="button"
+      class="playlist-trim"
+      :disabled="locked"
+      :aria-label="`Split ${splitTrackAccessibleName(track)} by chapters`"
+      aria-haspopup="dialog"
+      @mouseenter="onRemoveHover"
+      @click="onChapterSplit"
+    >
+      <MaruEmoji name="CardIndexDividers" size="md" />
     </button>
 
     <button

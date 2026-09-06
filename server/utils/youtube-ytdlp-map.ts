@@ -7,6 +7,7 @@ import {
   type YoutubePlaylistImportResponse,
 } from '../../shared/myo-editor/youtubePlaylistImport.ts'
 import type { YoutubeSearchVideoItem } from './youtube-search.ts'
+import { isValidYoutubeChapters, type YoutubeChapter } from '../../shared/myo-editor/youtubeChapters.ts'
 
 const YTDLP_PAGE_PREFIX = 'ytdlp:'
 const CHANNEL_ID = /^UC[\w-]{21,24}$/
@@ -33,6 +34,7 @@ export interface YtdlpDump {
   webpage_url?: string
   original_url?: string
   _type?: string
+  chapters?: Array<{ start_time?: number, end_time?: number, title?: string }> | null
 }
 
 export interface YoutubeVideoDetailsItem extends YoutubeSearchVideoItem {
@@ -91,6 +93,33 @@ function durationFields(entry: YtdlpDump): { duration?: string, durationSeconds?
     durationSeconds,
     duration: secondsToYoutubeDurationIso(durationSeconds),
   }
+}
+
+/** yt-dlp's `-J` dump already includes `chapters` when the video has real markers. */
+export function mapYtdlpChapters(entry: YtdlpDump): YoutubeChapter[] {
+  const raw = entry.chapters
+  if (!Array.isArray(raw) || raw.length < 2) return []
+
+  const fallbackEnd = typeof entry.duration === 'number' && Number.isFinite(entry.duration)
+    ? entry.duration
+    : undefined
+
+  const chapters: YoutubeChapter[] = []
+  for (let index = 0; index < raw.length; index++) {
+    const chapter = raw[index]
+    const startSeconds = chapter?.start_time
+    const endSeconds = chapter?.end_time ?? (index === raw.length - 1 ? fallbackEnd : undefined)
+    if (typeof startSeconds !== 'number' || !Number.isFinite(startSeconds)) return []
+    if (typeof endSeconds !== 'number' || !Number.isFinite(endSeconds)) return []
+    chapters.push({
+      title: chapter?.title?.trim() || `Chapter ${index + 1}`,
+      startSeconds,
+      endSeconds,
+    })
+  }
+
+  const sourceDuration = fallbackEnd ?? chapters[chapters.length - 1]!.endSeconds
+  return isValidYoutubeChapters(chapters, sourceDuration) ? chapters : []
 }
 
 function isSearchableVideoEntry(entry: YtdlpDump): boolean {

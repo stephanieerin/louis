@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { createError } from 'h3'
 import type { YoutubeChannelSummary } from '../../shared/myo-editor/youtubeUrl.ts'
 import type { YoutubePlaylistImportResponse } from '../../shared/myo-editor/youtubePlaylistImport.ts'
+import type { YoutubeChapter } from '../../shared/myo-editor/youtubeChapters.ts'
 import { rememberYoutubeCache } from './youtube.ts'
 import type { YoutubeSearchVideoItem } from './youtube-search.ts'
 import { runYtdlpJson } from './youtube-ytdlp-json.ts'
@@ -9,6 +10,7 @@ import {
   decodeYtdlpPageToken,
   encodeYtdlpPageToken,
   mapYtdlpChannelDump,
+  mapYtdlpChapters,
   mapYtdlpEntryToSearchItem,
   mapYtdlpEntryToVideoDetails,
   mapYtdlpPlaylistDump,
@@ -77,6 +79,25 @@ export async function fetchYoutubeVideosViaYtdlp(
         return item ? [item] : []
       }),
     }
+  })
+}
+
+/**
+ * Real chapter markers for one video. Always goes through yt-dlp's `-J` dump
+ * regardless of LOUIS_YOUTUBE_API_KEY — the YouTube Data API has no chapters field.
+ */
+export async function fetchYoutubeChaptersViaYtdlp(
+  event: H3Event | undefined,
+  videoId: string,
+): Promise<{ chapters: YoutubeChapter[] }> {
+  const cacheKey = `ytdlp-chapters:${videoId}`
+  return rememberYoutubeCache(cacheKey, async () => {
+    const dump = await runYtdlpJson({
+      event,
+      cacheKey,
+      args: ['--no-playlist', '--', `https://www.youtube.com/watch?v=${videoId}`],
+    })
+    return { chapters: mapYtdlpChapters(dump) }
   })
 }
 

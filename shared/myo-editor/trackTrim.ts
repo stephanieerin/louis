@@ -28,7 +28,8 @@ export function youtubeIdForTrack(track: Pick<PlaylistTrack, 'youtubeId' | 'sour
   return trimmed || undefined
 }
 
-export function canTrimTrack(track: Pick<PlaylistTrack, 'source' | 'youtubeId' | 'id'>): boolean {
+export function canTrimTrack(track: Pick<PlaylistTrack, 'source' | 'youtubeId' | 'id' | 'split'>): boolean {
+  if (track.split?.kind === 'chapters') return false
   if (track.source !== 'app-youtube' && track.source !== 'youtube-url') return false
   return Boolean(youtubeIdForTrack(track))
 }

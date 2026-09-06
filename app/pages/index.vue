@@ -103,6 +103,10 @@
       v-model:open="trackTrimOpen"
       v-model:track-id="trackTrimTrackId"
     />
+    <TrackChapterSplitDialog
+      v-model:open="trackChapterSplitOpen"
+      v-model:track-id="trackChapterSplitTrackId"
+    />
   </div>
 </template>
 
@@ -138,6 +142,7 @@ import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
 import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
 import TrackArtEditorModal from '~/components/track-art/TrackArtEditorModal.vue'
 import TrackTrimDialog from '~/components/track-trim/TrackTrimDialog.vue'
+import TrackChapterSplitDialog from '~/components/track-chapter-split/TrackChapterSplitDialog.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
 import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
@@ -157,6 +162,10 @@ import {
   TRACK_TRIM_EDITOR_KEY,
   useTrackTrimEditorShell,
 } from '~/composables/useTrackTrimEditor'
+import {
+  TRACK_CHAPTER_SPLIT_KEY,
+  useTrackChapterSplitEditorShell,
+} from '~/composables/useTrackChapterSplitEditor'
 
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
@@ -194,6 +203,11 @@ const trackTrimEditor = useTrackTrimEditorShell()
 provide(TRACK_TRIM_EDITOR_KEY, trackTrimEditor)
 const trackTrimOpen = trackTrimEditor.open
 const trackTrimTrackId = trackTrimEditor.trackId
+
+const trackChapterSplitEditor = useTrackChapterSplitEditorShell()
+provide(TRACK_CHAPTER_SPLIT_KEY, trackChapterSplitEditor)
+const trackChapterSplitOpen = trackChapterSplitEditor.open
+const trackChapterSplitTrackId = trackChapterSplitEditor.trackId
 
 const route = useRoute()
 const router = useRouter()
@@ -245,7 +259,7 @@ const showDesktopSetup = computed(
 
 /** Block editor interaction while a gate/setup owns the screen — not the shell root. */
 const mainContentInert = computed(
-  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value || trackArtOpen.value || trackTrimOpen.value,
+  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value || trackArtOpen.value || trackTrimOpen.value || trackChapterSplitOpen.value,
 )
 
 async function refreshDesktopSetupNeeded() {

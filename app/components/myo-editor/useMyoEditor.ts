@@ -28,6 +28,7 @@ import {
   splitSourceDuration,
   trackIndexForBlock,
 } from '#shared/myo-editor/splitTrack'
+import { chaptersToPlaylistTracks, type YoutubeChapter } from '#shared/myo-editor/youtubeChapters'
 import {
   collectPendingUpdateTargets,
   pendingTargetFrom,
@@ -172,6 +173,7 @@ export interface MyoEditorContext {
     previewUrl: string,
   ) => Promise<{ patched: boolean; error?: string }>
   setTrackTrim: (trackId: string, trim: PlaylistTrack['trim'] | null) => void
+  splitTrackByChapters: (trackId: string, chapters: YoutubeChapter[]) => void
   playlistManagePrompt: Ref<PlaylistManagePrompt | null>
   playlistManageBusy: Ref<boolean>
   playlistArtworkOpen: Ref<boolean>
@@ -1210,6 +1212,22 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     playlist.value = copy
   }
 
+  function splitTrackByChapters(trackId: string, chapters: YoutubeChapter[]) {
+    if (isPlaylistLocked.value || isPodcast.value) return
+    const index = playlist.value.findIndex(track => track.id === trackId)
+    if (index < 0) return
+    const current = playlist.value[index]!
+    if (current.split) return
+    const sourceDuration = splitSourceDuration(current, playlist.value)
+    if (!(sourceDuration > 0)) return
+    const source = clonePlaylist([current])[0]!
+    const rows = chaptersToPlaylistTracks(source, chapters, sourceDuration)
+    if (rows.length < 2) return
+    const copy = clonePlaylist(playlist.value)
+    copy.splice(index, 1, ...clonePlaylist(rows))
+    playlist.value = copy
+  }
+
   async function persistTrackArt(
     trackId: string,
     icon16x16: string,
@@ -1859,6 +1877,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     setTrackArt,
     persistTrackArt,
     setTrackTrim,
+    splitTrackByChapters,
     playlistManagePrompt,
     playlistManageBusy,
     playlistArtworkOpen,

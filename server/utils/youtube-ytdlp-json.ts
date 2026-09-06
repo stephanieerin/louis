@@ -53,6 +53,7 @@ interface YtdlpDumpEntry {
   webpage_url?: string
   original_url?: string
   _type?: string
+  chapters?: Array<{ start_time?: number, end_time?: number, title?: string }> | null
 }
 
 export interface RunYtdlpJsonOptions {

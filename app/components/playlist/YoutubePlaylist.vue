@@ -16,6 +16,7 @@ import {
 } from './saveProgressTestFixture'
 import { useLeftoverOutcomeFixtures } from './leftoverOutcomeFixtures'
 import { playlistBlocks, removeTrackOrGroup } from '#shared/myo-editor/splitTrack'
+import { removeChapterPart } from '#shared/myo-editor/youtubeChapters'
 
 const props = withDefaults(defineProps<{
   scrollToVideoId?: string | null
@@ -365,6 +366,12 @@ function removeTrack(id: string) {
   playlist.value = removeTrackOrGroup(playlist.value, id)
 }
 
+function removeChapterPartFromPlaylist(id: string) {
+  if (isDropzoneLocked.value || isCardLoadingActive.value || isYotoPlaylistBlocked.value) return
+  playEvent('removeTrack')
+  playlist.value = removeChapterPart(playlist.value, id)
+}
+
 function isVisibleInScrollContainer(item: HTMLElement, container: HTMLElement) {
   const itemRect = item.getBoundingClientRect()
   const containerRect = container.getBoundingClientRect()
@@ -430,6 +437,7 @@ watch(() => props.scrollToVideoId, async (id) => {
             :locked="isDropzoneLocked"
             :enter-index="enterIndex(block.tracks[0]!.id)"
             @remove="removeTrack"
+            @remove-part="removeChapterPartFromPlaylist"
           />
           <PlaylistItem
             v-else

@@ -174,6 +174,7 @@ export interface MyoEditorContext {
   ) => Promise<{ patched: boolean; error?: string }>
   setTrackTrim: (trackId: string, trim: PlaylistTrack['trim'] | null) => void
   splitTrackByChapters: (trackId: string, chapters: YoutubeChapter[]) => void
+  renameTrack: (trackId: string, title: string) => void
   playlistManagePrompt: Ref<PlaylistManagePrompt | null>
   playlistManageBusy: Ref<boolean>
   playlistArtworkOpen: Ref<boolean>
@@ -1234,6 +1235,17 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     playlist.value = copy
   }
 
+  function renameTrack(trackId: string, title: string) {
+    if (isPlaylistLocked.value || isPodcast.value) return
+    const trimmed = title.trim()
+    if (!trimmed) return
+    const index = playlist.value.findIndex(track => track.id === trackId)
+    if (index < 0) return
+    const copy = clonePlaylist(playlist.value)
+    copy[index]!.title = trimmed
+    playlist.value = copy
+  }
+
   async function persistTrackArt(
     trackId: string,
     icon16x16: string,
@@ -1884,6 +1896,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     persistTrackArt,
     setTrackTrim,
     splitTrackByChapters,
+    renameTrack,
     playlistManagePrompt,
     playlistManageBusy,
     playlistArtworkOpen,

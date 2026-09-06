@@ -8,6 +8,7 @@ import {
   chaptersToPlaylistTracks,
   formatChapterSplitChip,
   isValidYoutubeChapters,
+  removeChapterPart,
   type YoutubeChapter,
 } from './youtubeChapters.ts'
 
@@ -138,5 +139,71 @@ describe('canChapterSplitTrack', () => {
 
   it('rejects non-YouTube sources', () => {
     assert.equal(canChapterSplitTrack(track({ source: 'stream', youtubeId: undefined })), false)
+  })
+})
+
+describe('removeChapterPart', () => {
+  function chapterRow(index: number, count: number, overrides: Partial<PlaylistTrack> = {}): PlaylistTrack {
+    return track({
+      id: chapterSplitTrackId('abcdefghijk', index),
+      title: `Chapter ${index + 1}`,
+      split: {
+        groupId: 'abcdefghijk',
+        index,
+        count,
+        startSeconds: index * 60,
+        durationSeconds: 60,
+        sourceDurationSeconds: count * 60,
+        kind: 'chapters',
+      },
+      ...overrides,
+    })
+  }
+
+  it('renumbers the remaining chapters contiguously', () => {
+    const playlist = [chapterRow(0, 3), chapterRow(1, 3), chapterRow(2, 3)]
+    const result = removeChapterPart(playlist, chapterSplitTrackId('abcdefghijk', 1))
+    assert.equal(result.length, 2)
+    assert.equal(result[0]?.title, 'Chapter 1')
+    assert.equal(result[0]?.split?.index, 0)
+    assert.equal(result[0]?.split?.count, 2)
+    assert.equal(result[1]?.title, 'Chapter 3')
+    assert.equal(result[1]?.split?.index, 1)
+    assert.equal(result[1]?.split?.count, 2)
+  })
+
+  it('collapses to a plain ungrouped track when only one chapter remains', () => {
+    const playlist = [chapterRow(0, 2), chapterRow(1, 2)]
+    const result = removeChapterPart(playlist, chapterSplitTrackId('abcdefghijk', 0))
+    assert.equal(result.length, 1)
+    assert.equal(result[0]?.title, 'Chapter 2')
+    assert.equal(result[0]?.split, undefined)
+  })
+
+  it('preserves surrounding playlist tracks and their order', () => {
+    const before = track({ id: 'before-track', title: 'Before' })
+    const after = track({ id: 'after-track', title: 'After' })
+    const playlist = [before, chapterRow(0, 2), chapterRow(1, 2), after]
+    const result = removeChapterPart(playlist, chapterSplitTrackId('abcdefghijk', 0))
+    assert.deepEqual(result.map(t => t.id), ['before-track', chapterSplitTrackId('abcdefghijk', 1), 'after-track'])
+  })
+
+  it('is a no-op for a track not in a chapter-split group', () => {
+    const standalone = track({ id: 'solo' })
+    assert.deepEqual(removeChapterPart([standalone], 'solo'), [standalone])
+  })
+
+  it('is a no-op for an auto-split group (unchanged whole-group-only removal)', () => {
+    const auto = [
+      track({
+        id: 'x#p0',
+        split: { groupId: 'x', index: 0, count: 2, startSeconds: 0, durationSeconds: 60, kind: 'auto' },
+      }),
+      track({
+        id: 'x#p1',
+        split: { groupId: 'x', index: 1, count: 2, startSeconds: 60, durationSeconds: 60, kind: 'auto' },
+      }),
+    ]
+    assert.deepEqual(removeChapterPart(auto, 'x#p0'), auto)
   })
 })

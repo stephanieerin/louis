@@ -114,6 +114,13 @@
   translate: 0 -2px;
 }
 
+.playlist-track-row__title-input {
+  background: var(--color-maru-white);
+  border: 1px solid var(--color-maru-black);
+  border-radius: 0.25rem;
+  padding: 0 0.35rem;
+}
+
 .playlist-split-group__header {
   min-width: 0;
 }

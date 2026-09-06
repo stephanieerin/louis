@@ -1,6 +1,6 @@
 import type { PlaylistTrack, TrackSplit } from './types.ts'
 import { canTrimTrack } from './trackTrim.ts'
-import { PART_TITLE_MAX, splitGroupSourceTitle } from './splitTrack.ts'
+import { PART_TITLE_MAX, playlistBlocks, splitGroupSourceTitle } from './splitTrack.ts'
 
 export interface YoutubeChapter {
   title: string
@@ -100,4 +100,37 @@ export function canChapterSplitTrack(
 ): boolean {
   if (track.split?.kind === 'chapters') return false
   return canTrimTrack(track)
+}
+
+/**
+ * Removes one track from a chapter-split group, renumbering the rest so the
+ * group stays contiguous (0..N-1) — collapses to a plain ungrouped track if
+ * only one chapter remains. No-op if `trackId` isn't in a chapter group
+ * (auto-split groups keep their existing whole-group-only removal).
+ */
+export function removeChapterPart(playlist: PlaylistTrack[], trackId: string): PlaylistTrack[] {
+  const blocks = playlistBlocks(playlist)
+  const blockIndex = blocks.findIndex(block => (
+    block.kind === 'split'
+    && block.tracks[0]?.split?.kind === 'chapters'
+    && block.tracks.some(track => track.id === trackId)
+  ))
+  if (blockIndex < 0) return playlist
+
+  const block = blocks[blockIndex]!
+  const remaining = block.tracks.filter(track => track.id !== trackId)
+
+  const replacement: PlaylistTrack[] = remaining.length <= 1
+    ? remaining.map((track) => {
+        const { split: _split, ...rest } = track
+        return rest
+      })
+    : remaining.map((track, index) => ({
+        ...track,
+        split: { ...track.split!, index, count: remaining.length },
+      }))
+
+  const before = blocks.slice(0, blockIndex).flatMap(b => b.tracks)
+  const after = blocks.slice(blockIndex + 1).flatMap(b => b.tracks)
+  return [...before, ...replacement, ...after]
 }

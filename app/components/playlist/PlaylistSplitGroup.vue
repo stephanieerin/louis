@@ -18,6 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   remove: [id: string]
+  removePart: [id: string]
 }>()
 
 const firstTrack = computed(() => props.tracks[0]!)
@@ -26,6 +27,7 @@ const partCount = computed(() => props.tracks.length)
 const sourceTitle = computed(() => splitGroupSourceTitle(firstTrack.value.title))
 const canTrim = computed(() => canTrimTrack(firstTrack.value))
 const canChapterSplit = computed(() => canChapterSplitTrack(firstTrack.value))
+const isChapterGroup = computed(() => firstTrack.value.split?.kind === 'chapters')
 
 const element = ref<HTMLElement | null>(null)
 const handle = ref<HTMLElement | null>(null)
@@ -61,6 +63,11 @@ function onRemoveHover() {
 
 function onRemove() {
   emit('remove', firstTrack.value.id)
+}
+
+function onRemovePart(id: string) {
+  if (props.locked) return
+  emit('removePart', id)
 }
 
 function onTrim() {
@@ -141,10 +148,12 @@ function onChapterSplit() {
         class="playlist-split-group__row"
         :track="track"
         :locked="locked"
-        :display-title="splitPartNumberLabel(track.split?.index ?? 0)"
+        :display-title="isChapterGroup ? undefined : splitPartNumberLabel(track.split?.index ?? 0)"
         :part-label="partLabel(track)"
-        hide-remove
+        :hide-remove="!isChapterGroup"
         hide-trim
+        :remove-label="`Remove ${track.title}`"
+        @remove="onRemovePart"
       />
     </div>
   </li>

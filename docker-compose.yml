@@ -7,8 +7,9 @@ services:
       args:
         # Change on rebuild to pull latest yt-dlp nightly (CI sets this automatically).
         YTDLP_CACHE_BUST: ${YTDLP_CACHE_BUST:-}
+    # Override when the host's port 4000 is already taken by another service.
     ports:
-      - "4000:4000"
+      - "${LOUIS_HOST_PORT:-4000}:4000"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

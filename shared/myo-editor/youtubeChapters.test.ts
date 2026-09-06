@@ -110,13 +110,22 @@ describe('canChapterSplitTrack', () => {
     assert.equal(canChapterSplitTrack(track()), true)
   })
 
-  it('rejects a track already part of a split group', () => {
-    const grouped = track({
+  it('allows an existing auto-split group (long videos are auto-split immediately on add)', () => {
+    const autoGrouped = track({
       split: {
-        groupId: 'abcdefghijk', index: 0, count: 2, startSeconds: 0, durationSeconds: 120,
+        groupId: 'abcdefghijk', index: 0, count: 2, startSeconds: 0, durationSeconds: 120, kind: 'auto',
       },
     })
-    assert.equal(canChapterSplitTrack(grouped), false)
+    assert.equal(canChapterSplitTrack(autoGrouped), true)
+  })
+
+  it('rejects a track already split by real chapters', () => {
+    const chapterGrouped = track({
+      split: {
+        groupId: 'abcdefghijk', index: 0, count: 2, startSeconds: 0, durationSeconds: 120, kind: 'chapters',
+      },
+    })
+    assert.equal(canChapterSplitTrack(chapterGrouped), false)
   })
 
   it('rejects non-YouTube sources', () => {

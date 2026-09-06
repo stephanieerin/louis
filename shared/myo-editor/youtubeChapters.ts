@@ -84,10 +84,16 @@ export function chaptersToPlaylistTracks(
   })
 }
 
-/** Only offer chapter-splitting on an ungrouped, untrimmed-split YouTube row. */
+/**
+ * Offer chapter-splitting on an ungrouped YouTube row OR an existing
+ * equal-duration auto-split group (replacing it entirely) — but not on a
+ * group that's already chapter-split. Long videos (>55min, exactly the ones
+ * most likely to have real chapters) are auto-split the instant they're
+ * added, so gating on "ungrouped only" would hide this action for them.
+ */
 export function canChapterSplitTrack(
   track: Pick<PlaylistTrack, 'source' | 'youtubeId' | 'id' | 'split'>,
 ): boolean {
-  if (track.split) return false
+  if (track.split?.kind === 'chapters') return false
   return canTrimTrack(track)
 }

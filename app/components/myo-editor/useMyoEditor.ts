@@ -1212,19 +1212,25 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     playlist.value = copy
   }
 
+  /** Replaces a single track OR an entire existing auto-split group with chapter-derived rows. */
   function splitTrackByChapters(trackId: string, chapters: YoutubeChapter[]) {
     if (isPlaylistLocked.value || isPodcast.value) return
     const index = playlist.value.findIndex(track => track.id === trackId)
     if (index < 0) return
     const current = playlist.value[index]!
-    if (current.split) return
+    if (current.split?.kind === 'chapters') return
+    const blockIndex = blockIndexForTrack(playlist.value, index)
+    if (blockIndex < 0) return
+    const block = playlistBlocks(playlist.value)[blockIndex]
+    if (!block) return
     const sourceDuration = splitSourceDuration(current, playlist.value)
     if (!(sourceDuration > 0)) return
-    const source = clonePlaylist([current])[0]!
+    const start = trackIndexForBlock(playlist.value, blockIndex)
+    const source = clonePlaylist([block.tracks[0]!])[0]!
     const rows = chaptersToPlaylistTracks(source, chapters, sourceDuration)
     if (rows.length < 2) return
     const copy = clonePlaylist(playlist.value)
-    copy.splice(index, 1, ...clonePlaylist(rows))
+    copy.splice(start, block.tracks.length, ...clonePlaylist(rows))
     playlist.value = copy
   }
 

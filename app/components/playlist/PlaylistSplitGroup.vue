@@ -3,9 +3,11 @@ import { useSortable } from '@dnd-kit/vue/sortable'
 import type { PlaylistTrack } from '~/components/playlist/types'
 import { splitGroupSourceTitle, splitPartNumberLabel } from '#shared/myo-editor/splitTrack'
 import { canTrimTrack, isTrimmed } from '#shared/myo-editor/trackTrim'
+import { canChapterSplitTrack } from '#shared/myo-editor/youtubeChapters'
 import { playlistDragId, type PlaylistDragData } from './dnd'
 import PlaylistTrackRow from './PlaylistTrackRow.vue'
 import { TRACK_TRIM_EDITOR_KEY } from '~/composables/useTrackTrimEditor'
+import { TRACK_CHAPTER_SPLIT_KEY } from '~/composables/useTrackChapterSplitEditor'
 
 const props = defineProps<{
   tracks: PlaylistTrack[]
@@ -23,11 +25,13 @@ const groupId = computed(() => firstTrack.value.split?.groupId || firstTrack.val
 const partCount = computed(() => props.tracks.length)
 const sourceTitle = computed(() => splitGroupSourceTitle(firstTrack.value.title))
 const canTrim = computed(() => canTrimTrack(firstTrack.value))
+const canChapterSplit = computed(() => canChapterSplitTrack(firstTrack.value))
 
 const element = ref<HTMLElement | null>(null)
 const handle = ref<HTMLElement | null>(null)
 const { playEvent } = useUiSound()
 const trimEditor = inject(TRACK_TRIM_EDITOR_KEY)
+const chapterSplitEditor = inject(TRACK_CHAPTER_SPLIT_KEY, null)
 
 const { isDragging, isDropTarget } = useSortable({
   id: () => playlistDragId(`split:${groupId.value}`),
@@ -64,6 +68,12 @@ function onTrim() {
   playEvent('buttonClick')
   trimEditor?.openForTrack(firstTrack.value.id)
 }
+
+function onChapterSplit() {
+  if (props.locked || !canChapterSplit.value) return
+  playEvent('buttonClick')
+  chapterSplitEditor?.openForTrack(firstTrack.value.id)
+}
 </script>
 
 <template>
@@ -99,6 +109,18 @@ function onTrim() {
         @click="onTrim"
       >
         <MaruEmoji name="Scissors" size="md" />
+      </button>
+      <button
+        v-if="canChapterSplit"
+        type="button"
+        class="playlist-trim"
+        :disabled="locked"
+        :aria-label="`Split ${sourceTitle} by chapters`"
+        aria-haspopup="dialog"
+        @mouseenter="onRemoveHover"
+        @click="onChapterSplit"
+      >
+        <MaruEmoji name="CardIndexDividers" size="md" />
       </button>
       <button
         type="button"

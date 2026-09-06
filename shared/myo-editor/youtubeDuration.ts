@@ -30,6 +30,23 @@ export function formatDurationSeconds(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+/**
+ * Parse a user-typed timestamp — `ss`, `m:ss`, or `h:mm:ss` — back to seconds.
+ * Returns null for anything that isn't a valid, non-negative timestamp.
+ */
+export function parseTimestampToSeconds(input: string): number | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+
+  const parts = trimmed.split(':').map(part => part.trim())
+  if (parts.length > 3 || parts.some(part => !/^\d+(\.\d+)?$/.test(part))) return null
+
+  const numbers = parts.map(Number)
+  if (numbers.some(n => !Number.isFinite(n))) return null
+
+  return numbers.reduce((seconds, part) => seconds * 60 + part, 0)
+}
+
 /** Format a YouTube ISO duration for display. */
 export function formatYoutubeDurationIso(iso?: string | null): string {
   if (!iso) return ''

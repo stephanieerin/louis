@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import TrackTrimWaveform from './TrackTrimWaveform.vue'
-import { formatDurationSeconds } from '#shared/myo-editor/youtubeDuration'
+import { formatDurationSeconds, parseTimestampToSeconds } from '#shared/myo-editor/youtubeDuration'
+import { clampTrim, TRIM_MIN_SECONDS } from '#shared/myo-editor/trackTrim'
 
 const props = withDefaults(defineProps<{
   peaks: number[]
@@ -42,6 +43,38 @@ function formatTime(seconds: number) {
 
 const startLabel = computed(() => formatTime(props.trimStart))
 const endLabel = computed(() => formatTime(props.trimEnd))
+
+const minKeep = computed(() => Math.min(TRIM_MIN_SECONDS, Math.max(0.05, props.duration)))
+
+const editingField = ref<'start' | 'end' | null>(null)
+const editValue = ref('')
+const startInput = ref<HTMLInputElement | null>(null)
+const endInput = ref<HTMLInputElement | null>(null)
+
+function beginEdit(field: 'start' | 'end') {
+  if (props.peaksLoading) return
+  editingField.value = field
+  editValue.value = field === 'start' ? startLabel.value : endLabel.value
+  nextTick(() => (field === 'start' ? startInput : endInput).value?.select())
+}
+
+function commitEdit() {
+  const field = editingField.value
+  if (!field) return
+  const seconds = parseTimestampToSeconds(editValue.value)
+  editingField.value = null
+  if (seconds === null) return
+
+  const next = field === 'start'
+    ? clampTrim(seconds, props.trimEnd, props.duration, minKeep.value)
+    : clampTrim(props.trimStart, seconds, props.duration, minKeep.value)
+  emit('update:trimStart', next.startSeconds)
+  emit('update:trimEnd', next.endSeconds)
+}
+
+function cancelEdit() {
+  editingField.value = null
+}
 const lengthLabel = computed(() => (
   props.peaksLoading
     ? 'Loading...'
@@ -121,7 +154,22 @@ const lengthStyle = computed(() => ({
               :style="startStyle"
               :aria-label="`Start ${startLabel}`"
             >
-              <span class="track-trim-panel__stat-value type-meta font-maru-bold">{{ startLabel }}</span>
+              <input
+                v-if="editingField === 'start'"
+                ref="startInput"
+                v-model="editValue"
+                class="track-trim-panel__stat-input type-meta font-maru-bold"
+                aria-label="Enter start time"
+                @keydown.enter="commitEdit"
+                @keydown.esc="cancelEdit"
+                @blur="commitEdit"
+              >
+              <span
+                v-else
+                class="track-trim-panel__stat-value type-meta font-maru-bold"
+                title="Double-click to type an exact time"
+                @dblclick="beginEdit('start')"
+              >{{ startLabel }}</span>
             </div>
             <div
               class="track-trim-panel__stat track-trim-panel__stat--length"
@@ -135,7 +183,22 @@ const lengthStyle = computed(() => ({
               :style="endStyle"
               :aria-label="`End ${endLabel}`"
             >
-              <span class="track-trim-panel__stat-value type-meta font-maru-bold">{{ endLabel }}</span>
+              <input
+                v-if="editingField === 'end'"
+                ref="endInput"
+                v-model="editValue"
+                class="track-trim-panel__stat-input type-meta font-maru-bold"
+                aria-label="Enter end time"
+                @keydown.enter="commitEdit"
+                @keydown.esc="cancelEdit"
+                @blur="commitEdit"
+              >
+              <span
+                v-else
+                class="track-trim-panel__stat-value type-meta font-maru-bold"
+                title="Double-click to type an exact time"
+                @dblclick="beginEdit('end')"
+              >{{ endLabel }}</span>
             </div>
           </div>
         </div>

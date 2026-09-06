@@ -33,6 +33,8 @@ const trimEnd = ref(0)
 const localDuration = ref(0)
 const peaks = ref<number[]>(PLACEHOLDER_PEAKS)
 const peaksLoading = ref(false)
+/** Keyed by youtubeId — this dialog is a page-lifetime singleton, so this survives reopens. */
+const peaksCache = new Map<string, { peaks: number[], duration: number }>()
 
 let phoneMq: MediaQueryList | null = null
 let peaksAbort: AbortController | null = null
@@ -100,12 +102,31 @@ function seedFromTrack(next: PlaylistTrack | null) {
   player.seek(resolved.startSeconds)
 }
 
+function applyPeaksResult(data: { peaks: number[], duration: number }) {
+  peaks.value = data.peaks
+  if (!(localDuration.value > 0) && data.duration > 0) {
+    localDuration.value = data.duration
+    const resolved = clampTrim(trimStart.value, trimEnd.value || data.duration, data.duration)
+    trimStart.value = resolved.startSeconds
+    trimEnd.value = resolved.endSeconds
+  }
+}
+
 async function loadPeaks(next: PlaylistTrack) {
   const id = youtubeIdForTrack(next)
   if (!id) {
     peaks.value = PLACEHOLDER_PEAKS
     return
   }
+
+  // Same video's waveform is identical across every part/re-open — skip the
+  // reload (and the loading-spinner flash) once we already have it.
+  const cached = peaksCache.get(id)
+  if (cached) {
+    applyPeaksResult(cached)
+    return
+  }
+
   peaksAbort?.abort()
   peaksAbort = new AbortController()
   const { signal } = peaksAbort
@@ -116,13 +137,8 @@ async function loadPeaks(next: PlaylistTrack) {
       { signal },
     )
     if (signal.aborted) return
-    peaks.value = data.peaks
-    if (!(localDuration.value > 0) && data.duration > 0) {
-      localDuration.value = data.duration
-      const resolved = clampTrim(trimStart.value, trimEnd.value || data.duration, data.duration)
-      trimStart.value = resolved.startSeconds
-      trimEnd.value = resolved.endSeconds
-    }
+    peaksCache.set(id, data)
+    applyPeaksResult(data)
   }
   catch {
     if (signal.aborted) return

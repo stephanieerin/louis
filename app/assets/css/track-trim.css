@@ -78,6 +78,17 @@
 
 .track-trim-panel__stat-value {
   font-variant-numeric: tabular-nums;
+  cursor: text;
+}
+
+.track-trim-panel__stat-input {
+  font-variant-numeric: tabular-nums;
+  width: 4.5ch;
+  text-align: center;
+  background: var(--color-maru-white);
+  border: 1px solid var(--color-maru-black);
+  border-radius: 0.25rem;
+  padding: 0 0.15rem;
 }
 
 .track-trim-panel__times-track.is-loading .track-trim-panel__stat-value {

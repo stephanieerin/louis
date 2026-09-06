@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import {
   formatDurationSeconds,
   formatYoutubeDurationIso,
+  parseTimestampToSeconds,
   parseYoutubeDurationIso,
   secondsToYoutubeDurationIso,
 } from './youtubeDuration.ts'
@@ -58,5 +59,34 @@ describe('secondsToYoutubeDurationIso', () => {
     assert.equal(secondsToYoutubeDurationIso(0), 'PT0S')
     assert.equal(secondsToYoutubeDurationIso(-1), 'PT0S')
     assert.equal(secondsToYoutubeDurationIso(Number.NaN), 'PT0S')
+  })
+})
+
+describe('parseTimestampToSeconds', () => {
+  it('parses bare seconds', () => {
+    assert.equal(parseTimestampToSeconds('83'), 83)
+    assert.equal(parseTimestampToSeconds('0'), 0)
+  })
+
+  it('parses m:ss', () => {
+    assert.equal(parseTimestampToSeconds('1:23'), 83)
+    assert.equal(parseTimestampToSeconds('01:05'), 65)
+  })
+
+  it('parses h:mm:ss', () => {
+    assert.equal(parseTimestampToSeconds('1:02:03'), 3723)
+  })
+
+  it('trims surrounding whitespace', () => {
+    assert.equal(parseTimestampToSeconds('  1:23  '), 83)
+  })
+
+  it('rejects blank, malformed, or too many segments', () => {
+    assert.equal(parseTimestampToSeconds(''), null)
+    assert.equal(parseTimestampToSeconds('   '), null)
+    assert.equal(parseTimestampToSeconds('abc'), null)
+    assert.equal(parseTimestampToSeconds('1:2:3:4'), null)
+    assert.equal(parseTimestampToSeconds('1::3'), null)
+    assert.equal(parseTimestampToSeconds('-5'), null)
   })
 })

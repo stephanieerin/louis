@@ -14,6 +14,7 @@ import {
   parseYoutubeDurationIso,
 } from '#shared/myo-editor/youtubeDuration'
 import { formatSplitIntoChip, planTrackSplit } from '#shared/myo-editor/splitTrack'
+import { formatChapterSplitChip } from '#shared/myo-editor/youtubeChapters'
 
 const props = withDefaults(defineProps<{
   video: YoutubeVideoSummary
@@ -37,11 +38,48 @@ const handle = ref<HTMLElement | null>(null)
 
 const resultKey = computed(() => videoResultKey(props.video))
 
-const splitChip = computed(() => {
+const chapterCount = ref<number | null>(null)
+let chaptersAbort: AbortController | null = null
+
+/** Only videos that would already show the equal-duration chip are candidates. */
+const autoSplitPlan = computed(() => {
   const seconds = props.video.durationSeconds
-  if (typeof seconds !== 'number') return ''
-  const plan = planTrackSplit(seconds)
+  return typeof seconds === 'number' ? planTrackSplit(seconds) : null
+})
+
+const splitChip = computed(() => {
+  if (chapterCount.value && chapterCount.value >= 2) {
+    return formatChapterSplitChip(chapterCount.value)
+  }
+  const plan = autoSplitPlan.value
   return plan ? formatSplitIntoChip(plan.count) : ''
+})
+
+/** Real chapter count, when available — replaces the generic equal-duration chip. */
+async function loadChapterCount() {
+  if (!autoSplitPlan.value) return
+  chaptersAbort?.abort()
+  chaptersAbort = new AbortController()
+  try {
+    const data = await $fetch<{ chapters: unknown[] }>(
+      `/api/youtube/preview/${props.video.id}/chapters`,
+      { signal: chaptersAbort.signal },
+    )
+    if (Array.isArray(data.chapters) && data.chapters.length >= 2) {
+      chapterCount.value = data.chapters.length
+    }
+  }
+  catch {
+    // Fall back to the equal-duration chip — this is a nice-to-have, not critical.
+  }
+}
+
+onMounted(() => {
+  void loadChapterCount()
+})
+
+onUnmounted(() => {
+  chaptersAbort?.abort()
 })
 
 const selected = computed(() => isSelected(resultKey.value))

@@ -6,6 +6,7 @@ import {
   chapterSplitTrackId,
   chapterTrackTitle,
   chaptersToPlaylistTracks,
+  formatChapterSplitChip,
   isValidYoutubeChapters,
   type YoutubeChapter,
 } from './youtubeChapters.ts'
@@ -53,6 +54,13 @@ describe('isValidYoutubeChapters', () => {
 
   it('rejects chapters extending well past the source duration', () => {
     assert.equal(isValidYoutubeChapters(CHAPTERS, 200), false)
+  })
+})
+
+describe('formatChapterSplitChip', () => {
+  it('labels the real chapter count', () => {
+    assert.equal(formatChapterSplitChip(13), 'Splits into 13 chapters')
+    assert.equal(formatChapterSplitChip(2), 'Splits into 2 chapters')
   })
 })
 

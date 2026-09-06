@@ -34,6 +34,10 @@ export function chapterSplitTrackId(youtubeId: string, index: number): string {
   return `${youtubeId}#c${index}`
 }
 
+export function formatChapterSplitChip(chapterCount: number): string {
+  return `Splits into ${chapterCount} chapters`
+}
+
 export function chapterTrackTitle(rawTitle: string, index: number): string {
   const trimmed = rawTitle?.trim()
   if (!trimmed) return `Chapter ${index + 1}`

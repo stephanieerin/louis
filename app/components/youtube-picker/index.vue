@@ -20,7 +20,10 @@ const props = withDefaults(defineProps<{
   maxResults?: number
   embedded?: boolean
 }>(), {
-  maxResults: 12,
+  // Kept smaller than before: each long-video card now fetches its real
+  // chapter count (see YoutubeResultCard.vue), so fewer per page keeps
+  // concurrent yt-dlp calls reasonable. "Load more" still paginates.
+  maxResults: 8,
   embedded: false,
 })
 

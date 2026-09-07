@@ -195,6 +195,7 @@ export const MYO_EDITOR_KEY: InjectionKey<MyoEditorContext> = Symbol('myoEditor'
 function playlistSnapshot(playlist: PlaylistTrack[]): string {
   return JSON.stringify(playlist.map(track => ({
     id: playlistRowId(track),
+    title: track.title,
     icon: resolveTrackIcon(track).icon16x16,
     trim: track.trim
       ? [track.trim.startSeconds, track.trim.endSeconds]

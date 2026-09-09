@@ -159,6 +159,12 @@ export default defineNuxtConfig({
     audioCacheMaxAgeMs: louisEnv.audioCacheMaxAgeMs,
     audioCacheMaxBytes: louisEnv.audioCacheMaxBytes,
     enableDebugRoutes: louisEnv.enableDebugRoutes,
+    // Optional: mirror saved Yoto playlists into a Jellyfin music library. No-op when unset.
+    jellyfinMusicDir: louisEnv.jellyfinMusicDir,
+    jellyfinPlaylistsDir: louisEnv.jellyfinPlaylistsDir,
+    jellyfinPathPrefix: louisEnv.jellyfinPathPrefix,
+    jellyfinBaseUrl: louisEnv.jellyfinBaseUrl,
+    jellyfinApiKey: louisEnv.jellyfinApiKey,
     public: {
       appVersion: packageJson.version || '0.0.0',
       /** Set LOUIS_PUBLIC_DESKTOP=1 by the Electron host when spawning Nitro. */

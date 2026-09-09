@@ -54,6 +54,12 @@ export const LOUIS_ENV_BINDINGS = [
   { path: 'audioCacheMaxBytes', louis: 'LOUIS_AUDIO_CACHE_MAX_BYTES', nuxt: 'NUXT_AUDIO_CACHE_MAX_BYTES' },
   { path: 'enableDebugRoutes', louis: 'LOUIS_ENABLE_DEBUG_ROUTES', nuxt: 'NUXT_ENABLE_DEBUG_ROUTES' },
   { path: 'public.desktop', louis: 'LOUIS_PUBLIC_DESKTOP', nuxt: 'NUXT_PUBLIC_DESKTOP' },
+  /** Optional: mirror saved Yoto playlists into a Jellyfin music library. Off when unset. */
+  { path: 'jellyfinMusicDir', louis: 'LOUIS_JELLYFIN_MUSIC_DIR', nuxt: 'NUXT_JELLYFIN_MUSIC_DIR' },
+  { path: 'jellyfinPlaylistsDir', louis: 'LOUIS_JELLYFIN_PLAYLISTS_DIR', nuxt: 'NUXT_JELLYFIN_PLAYLISTS_DIR' },
+  { path: 'jellyfinPathPrefix', louis: 'LOUIS_JELLYFIN_PATH_PREFIX', nuxt: 'NUXT_JELLYFIN_PATH_PREFIX' },
+  { path: 'jellyfinBaseUrl', louis: 'LOUIS_JELLYFIN_BASE_URL', nuxt: 'NUXT_JELLYFIN_BASE_URL' },
+  { path: 'jellyfinApiKey', louis: 'LOUIS_JELLYFIN_API_KEY', nuxt: 'NUXT_JELLYFIN_API_KEY' },
 ]
 
 /**
@@ -174,6 +180,11 @@ export function louisRuntimeConfigDefaults() {
     ),
     enableDebugRoutes: truthy(pickLouisEnv('LOUIS_ENABLE_DEBUG_ROUTES', 'NUXT_ENABLE_DEBUG_ROUTES')),
     publicDesktop: truthy(pickLouisEnv('LOUIS_PUBLIC_DESKTOP', 'NUXT_PUBLIC_DESKTOP')),
+    jellyfinMusicDir: pickLouisEnv('LOUIS_JELLYFIN_MUSIC_DIR', 'NUXT_JELLYFIN_MUSIC_DIR'),
+    jellyfinPlaylistsDir: pickLouisEnv('LOUIS_JELLYFIN_PLAYLISTS_DIR', 'NUXT_JELLYFIN_PLAYLISTS_DIR'),
+    jellyfinPathPrefix: pickLouisEnv('LOUIS_JELLYFIN_PATH_PREFIX', 'NUXT_JELLYFIN_PATH_PREFIX'),
+    jellyfinBaseUrl: pickLouisEnv('LOUIS_JELLYFIN_BASE_URL', 'NUXT_JELLYFIN_BASE_URL'),
+    jellyfinApiKey: pickLouisEnv('LOUIS_JELLYFIN_API_KEY', 'NUXT_JELLYFIN_API_KEY'),
   }
 }
 

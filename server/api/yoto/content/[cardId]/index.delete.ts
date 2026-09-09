@@ -1,5 +1,6 @@
 import { hasContentManageScope } from '../../../../utils/yoto-auth'
 import { fetchYotoApi, getYotoAccessToken, getYotoAuthScope } from '../../../../utils/yoto'
+import { removeJellyfinPlaylist, resolveJellyfinSyncConfig } from '../../../../utils/jellyfin-sync'
 
 export default defineEventHandler(async (event) => {
   const cardId = getRouterParam(event, 'cardId')
@@ -17,5 +18,16 @@ export default defineEventHandler(async (event) => {
 
   const accessToken = await getYotoAccessToken(event)
   await fetchYotoApi(`/content/${cardId}`, accessToken, { method: 'DELETE' })
+
+  const jellyfinConfig = resolveJellyfinSyncConfig(event)
+  if (jellyfinConfig) {
+    try {
+      await removeJellyfinPlaylist(jellyfinConfig, cardId)
+    }
+    catch (err) {
+      console.error('[jellyfin-sync] failed to remove playlist on card delete', err)
+    }
+  }
+
   return { ok: true as const }
 })

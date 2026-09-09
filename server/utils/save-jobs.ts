@@ -28,6 +28,12 @@ import {
 } from '#shared/myo-editor/yotoMyoLimits'
 import { downloadYoutubeAudio } from './youtube-download'
 import { findIngestedLocalAudioFile } from './local-audio-upload'
+import {
+  extensionForYotoFormat,
+  extractSha256FromYotoTrackUrl,
+  isJellyfinSyncConfigured,
+  syncJellyfinPlaylist,
+} from './jellyfin-sync'
 import { hashFileSha256, pollPutAudioTranscode, putAudioForTranscode } from './yoto-media'
 import { loudnormAudioFile } from './ffmpeg-loudnorm'
 import { probeAudioDurationSeconds, splitAudioFile } from './ffmpeg-split'
@@ -211,6 +217,8 @@ async function runSaveJob(
   if (!job) return
 
   const uploadedByIndex = new Map<number, TranscodedAudioResult>()
+  /** Populated in the `put` steps below — the only point the finished local file is reachable before its ephemeral job dir is swept. */
+  const localFilePathByIndex = new Map<number, string>()
   let createOutcomeUncertain = false
   let workingPlaylist = playlist
   const stopHeartbeat = startSaveJobHeartbeat(jobId)
@@ -706,6 +714,7 @@ async function runSaveJob(
               const part = parts[index]!
               updateTrack(job, part.playlistIndex, 'uploading')
               reportExtractProgress()
+              localFilePathByIndex.set(part.playlistIndex, prepared.filePath)
               return putAudioForTranscode(accessToken, prepared.filePath, prepared.filename, {
                 meta: {
                   jobId,
@@ -802,6 +811,7 @@ async function runSaveJob(
         put: async (index, prepared) => {
           const action = uploadActions[index]!
           updateTrack(job, action.playlistIndex, 'uploading')
+          localFilePathByIndex.set(action.playlistIndex, prepared.filePath)
           return putAudioForTranscode(accessToken, prepared.filePath, prepared.filename, {
             meta: {
               jobId,
@@ -945,6 +955,35 @@ async function runSaveJob(
       createOutcomeUncertain = true
       updateJob(jobId, { cardId: requireCreatedCardId(response) })
       createOutcomeUncertain = false
+    }
+
+    const finalCardId = target.operation === 'update' ? target.cardId : job.cardId
+    if (finalCardId && isJellyfinSyncConfigured(event)) {
+      try {
+        await syncJellyfinPlaylist(event, {
+          cardId: finalCardId,
+          cardTitle,
+          tracks: workingPlaylist.map((track, index) => {
+            const transcoded = uploadedByIndex.get(index)
+            const sha256 = transcoded?.transcodedSha256
+              ?? extractSha256FromYotoTrackUrl(track.yotoReuse?.trackUrl)
+            const freshLocalFilePath = localFilePathByIndex.get(index)
+            const ext = freshLocalFilePath
+              ? (path.extname(freshLocalFilePath) || '.m4a')
+              : extensionForYotoFormat(transcoded?.transcodedInfo.format ?? track.yotoReuse?.format)
+            return {
+              title: track.title,
+              durationSeconds: transcoded?.transcodedInfo.duration ?? track.duration,
+              sha256,
+              ext,
+              freshLocalFilePath,
+            }
+          }),
+        })
+      }
+      catch (err) {
+        console.error('[jellyfin-sync] sync failed', err)
+      }
     }
 
     updateJob(jobId, { status: 'complete', progress: 100, operationProgress: 100 })
